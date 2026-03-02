@@ -3,8 +3,10 @@ import SwiftData
 
 struct SessionDetailScreen: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Bindable var session: SessionEntity
     @State private var showWizard = false
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         DojoScreen {
@@ -43,8 +45,32 @@ struct SessionDetailScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(DojoTheme.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Session", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(DojoTheme.textSecondary)
+                }
+            }
+        }
         .sheet(isPresented: $showWizard) {
             NewProjectWizardScreen(session: session)
+        }
+        .alert("Delete this session?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                let repo = ProjectRepository(context: context)
+                try? repo.deleteSession(session)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes all projects, holds, and stored images in this session.")
         }
     }
 

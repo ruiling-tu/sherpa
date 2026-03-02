@@ -8,11 +8,13 @@ struct LibraryTabScreen: View {
     @State private var selectedGrades: Set<String> = []
     @State private var selectedStatuses: Set<EntryStatus> = []
     @State private var selectedAngles: Set<WallAngle> = []
-    @State private var selectedGym = ""
-    @State private var selectedTag = ""
+    @State private var selectedGym: String?
+    @State private var selectedTags: Set<String> = []
     @State private var startDate = Calendar.current.date(byAdding: .month, value: -6, to: Date()) ?? Date()
     @State private var endDate = Date()
     @State private var showFilters = false
+
+    private let grid = [GridItem(.flexible(), spacing: DojoSpace.md), GridItem(.flexible(), spacing: DojoSpace.md)]
 
     var body: some View {
         NavigationStack {
@@ -45,12 +47,12 @@ struct LibraryTabScreen: View {
                         DojoEmptyState(title: "No matches", subtitle: "Adjust filters or search text to see projects.", icon: "line.3.horizontal.decrease.circle")
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: DojoSpace.md) {
+                            LazyVGrid(columns: grid, spacing: DojoSpace.md) {
                                 ForEach(filteredEntries) { entry in
                                     NavigationLink {
                                         ProjectDetailScreen(entry: entry)
                                     } label: {
-                                        LibraryRow(entry: entry)
+                                        LibraryCard(entry: entry)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -69,17 +71,30 @@ struct LibraryTabScreen: View {
         }
     }
 
+    private var allGyms: [String] {
+        Array(Set(entries.map(\.gym).filter { !$0.isEmpty })).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    private var allTags: [String] {
+        let tags = entries.flatMap { entry in
+            entry.styleTags.map(\.rawValue) + entry.holdTypeTags.map(\.rawValue) + entry.techniqueTags.map(\.rawValue)
+        }
+        return Array(Set(tags)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
     private var filteredEntries: [ProjectEntryEntity] {
         entries.filter { entry in
             let gradeOK = selectedGrades.isEmpty || selectedGrades.contains(entry.grade)
             let statusOK = selectedStatuses.isEmpty || selectedStatuses.contains(entry.status)
             let angleOK = selectedAngles.isEmpty || selectedAngles.contains(entry.wallAngle)
-            let gymOK = selectedGym.isEmpty || entry.gym.localizedCaseInsensitiveContains(selectedGym)
+            let gymOK = selectedGym == nil || entry.gym == selectedGym
             let dateOK = entry.createdAt >= startDate && entry.createdAt <= endDate
             let searchOK = query.isEmpty || entry.notes.localizedCaseInsensitiveContains(query)
-            let tags = entry.styleTags.map(\.rawValue) + entry.holdTypeTags.map(\.rawValue) + entry.techniqueTags.map(\.rawValue)
-            let tagOK = selectedTag.isEmpty || tags.contains { $0.localizedCaseInsensitiveContains(selectedTag) }
-            return gradeOK && statusOK && angleOK && gymOK && dateOK && searchOK && tagOK
+
+            let entryTags = Set(entry.styleTags.map(\.rawValue) + entry.holdTypeTags.map(\.rawValue) + entry.techniqueTags.map(\.rawValue))
+            let tagsOK = selectedTags.isEmpty || !entryTags.intersection(selectedTags).isEmpty
+
+            return gradeOK && statusOK && angleOK && gymOK && dateOK && searchOK && tagsOK
         }
     }
 
@@ -120,10 +135,39 @@ struct LibraryTabScreen: View {
                 }
             }
 
-            TextField("Gym", text: $selectedGym)
-                .textFieldStyle(.roundedBorder)
-            TextField("Tag", text: $selectedTag)
-                .textFieldStyle(.roundedBorder)
+            HStack(spacing: DojoSpace.md) {
+                Menu {
+                    Button(selectedGym == nil ? "All Gyms ✓" : "All Gyms") {
+                        selectedGym = nil
+                    }
+                    Divider()
+                    ForEach(allGyms, id: \.self) { gym in
+                        Button(selectedGym == gym ? "\(gym) ✓" : gym) {
+                            selectedGym = gym
+                        }
+                    }
+                } label: {
+                    filterPill(title: "Gym", value: selectedGym ?? "All Gyms")
+                }
+
+                Menu {
+                    Button(selectedTags.isEmpty ? "All Tags ✓" : "All Tags") {
+                        selectedTags.removeAll()
+                    }
+                    Divider()
+                    ForEach(allTags, id: \.self) { tag in
+                        Button(selectedTags.contains(tag) ? "\(tag) ✓" : tag) {
+                            if selectedTags.contains(tag) {
+                                selectedTags.remove(tag)
+                            } else {
+                                selectedTags.insert(tag)
+                            }
+                        }
+                    }
+                } label: {
+                    filterPill(title: "Tags", value: selectedTags.isEmpty ? "All Tags" : "\(selectedTags.count) selected")
+                }
+            }
 
             DatePicker("From", selection: $startDate, displayedComponents: .date)
                 .font(DojoType.caption)
@@ -132,57 +176,60 @@ struct LibraryTabScreen: View {
         }
     }
 
-    private func toggleGrade(_ grade: String) {
-        if selectedGrades.contains(grade) {
-            selectedGrades.remove(grade)
-        } else {
-            selectedGrades.insert(grade)
+    private func filterPill(title: String, value: String) -> some View {
+        HStack(spacing: DojoSpace.xs) {
+            Text(title)
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+            Text(value)
+                .font(DojoType.caption)
+                .lineLimit(1)
         }
+        .padding(.horizontal, DojoSpace.sm)
+        .padding(.vertical, DojoSpace.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.white.opacity(0.7))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+        )
+    }
+
+    private func toggleGrade(_ grade: String) {
+        if selectedGrades.contains(grade) { selectedGrades.remove(grade) } else { selectedGrades.insert(grade) }
     }
 
     private func toggleStatus(_ status: EntryStatus) {
-        if selectedStatuses.contains(status) {
-            selectedStatuses.remove(status)
-        } else {
-            selectedStatuses.insert(status)
-        }
+        if selectedStatuses.contains(status) { selectedStatuses.remove(status) } else { selectedStatuses.insert(status) }
     }
 
     private func toggleAngle(_ angle: WallAngle) {
-        if selectedAngles.contains(angle) {
-            selectedAngles.remove(angle)
-        } else {
-            selectedAngles.insert(angle)
-        }
+        if selectedAngles.contains(angle) { selectedAngles.remove(angle) } else { selectedAngles.insert(angle) }
     }
 }
 
-private struct LibraryRow: View {
+private struct LibraryCard: View {
     let entry: ProjectEntryEntity
 
     var body: some View {
         DojoSurface {
-            HStack(spacing: DojoSpace.md) {
-                if let image = ImageStore.load(path: entry.imagePath) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 76, height: 76)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
+            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                ProblemCard2DView(
+                    holds: entry.holds,
+                    sourceImage: ImageStore.load(path: entry.imagePath),
+                    grade: entry.grade,
+                    onTapHold: { _ in }
+                )
+                .frame(height: 150)
 
-                VStack(alignment: .leading, spacing: DojoSpace.xs) {
-                    Text(entry.name.isEmpty ? "Untitled" : entry.name)
-                        .font(DojoType.section)
-                    Text("\(entry.grade) • \(entry.status.title) • \(entry.wallAngle.title)")
-                        .font(DojoType.caption)
-                        .foregroundStyle(DojoTheme.textSecondary)
-                    Text(entry.notes)
-                        .font(DojoType.caption)
-                        .lineLimit(2)
-                        .foregroundStyle(DojoTheme.textSecondary)
+                Text(entry.name.isEmpty ? "Untitled" : entry.name)
+                    .font(DojoType.section)
+                    .lineLimit(1)
+
+                HStack {
+                    DojoTagChip(title: entry.grade, selected: true)
+                    DojoTagChip(title: entry.status.title, selected: false)
                 }
-                Spacer()
             }
         }
     }

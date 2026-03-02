@@ -33,6 +33,7 @@
 		BB0000000000000000000218 /* DojoTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000119 /* DojoTheme.swift */; };
 		BB0000000000000000000219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000120 /* Assets.xcassets */; };
 		BB000000000000000000021A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000121 /* LaunchScreen.storyboard */; };
+		BB000000000000000000021B /* HoldShapeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000122 /* HoldShapeRenderer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +65,7 @@
 		BB0000000000000000000119 /* DojoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DojoTheme.swift; sourceTree = "<group>"; };
 		BB0000000000000000000120 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BB0000000000000000000121 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		BB0000000000000000000122 /* HoldShapeRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldShapeRenderer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +152,7 @@
 				BB0000000000000000000109 /* ImageGeometry.swift */,
 				BB000000000000000000010A /* ImagePicker.swift */,
 				BB0000000000000000000119 /* DojoTheme.swift */,
+				BB0000000000000000000122 /* HoldShapeRenderer.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -301,6 +304,7 @@
 				BB0000000000000000000216 /* SessionDetailScreen.swift in Sources */,
 				BB0000000000000000000217 /* SettingsScreen.swift in Sources */,
 				BB0000000000000000000218 /* DojoTheme.swift in Sources */,
+				BB000000000000000000021B /* HoldShapeRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

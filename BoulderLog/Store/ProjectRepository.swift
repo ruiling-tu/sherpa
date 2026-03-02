@@ -12,6 +12,10 @@ struct ProjectRepository {
     }
 
     func deleteSession(_ session: SessionEntity) throws {
+        // Explicitly delete entry images before deleting the session tree.
+        for entry in session.entries {
+            ImageStore.delete(path: entry.imagePath)
+        }
         context.delete(session)
         try context.save()
     }

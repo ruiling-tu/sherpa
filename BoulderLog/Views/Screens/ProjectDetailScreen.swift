@@ -27,7 +27,7 @@ struct ProjectDetailScreen: View {
                                 .font(DojoType.body)
 
                             DojoSectionHeader(title: "2D Problem Card")
-                            ProblemCard2DView(holds: sortedHolds) { hold in
+                            ProblemCard2DView(holds: sortedHolds, sourceImage: ImageStore.load(path: entry.imagePath), grade: entry.grade) { hold in
                                 selectedHold = hold
                             }
                         }
