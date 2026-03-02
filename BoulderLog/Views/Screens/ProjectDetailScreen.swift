@@ -7,6 +7,7 @@ struct ProjectDetailScreen: View {
 
     @State private var showOverlay = true
     @State private var selectedHold: HoldEntity?
+    @State private var cardRefreshToken = 0
 
     var body: some View {
         DojoScreen {
@@ -26,8 +27,16 @@ struct ProjectDetailScreen: View {
                                 .tint(DojoTheme.accentPrimary)
                                 .font(DojoType.body)
 
-                            DojoSectionHeader(title: "2D Problem Card")
-                            ProblemCard2DView(holds: sortedHolds, sourceImage: ImageStore.load(path: entry.imagePath), grade: entry.grade) { hold in
+                            HStack {
+                                DojoSectionHeader(title: "2D Problem Card")
+                                Spacer()
+                                Button("Regenerate") {
+                                    cardRefreshToken += 1
+                                }
+                                .font(DojoType.caption)
+                                .foregroundStyle(DojoTheme.accentPrimary)
+                            }
+                            ProblemCard2DView(entryID: entry.id, holds: sortedHolds, sourceImage: ImageStore.load(path: entry.imagePath), grade: entry.grade, refreshTrigger: cardRefreshToken) { hold in
                                 selectedHold = hold
                             }
                         }

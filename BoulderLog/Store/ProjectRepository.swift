@@ -15,6 +15,7 @@ struct ProjectRepository {
         // Explicitly delete entry images before deleting the session tree.
         for entry in session.entries {
             ImageStore.delete(path: entry.imagePath)
+            ProblemCardImageStore.invalidate(entryID: entry.id)
         }
         context.delete(session)
         try context.save()
@@ -64,6 +65,7 @@ struct ProjectRepository {
 
     func deleteEntry(_ entry: ProjectEntryEntity) throws {
         ImageStore.delete(path: entry.imagePath)
+        ProblemCardImageStore.invalidate(entryID: entry.id)
         context.delete(entry)
         try context.save()
     }

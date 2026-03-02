@@ -7,6 +7,7 @@ final class NewProjectWizardViewModel: ObservableObject {
         case photo
         case crop
         case holds
+        case preview
         case metadata
         case save
 
@@ -17,8 +18,9 @@ final class NewProjectWizardViewModel: ObservableObject {
             case .photo: return "Step 1: Photo"
             case .crop: return "Step 2: Crop"
             case .holds: return "Step 3: Holds"
-            case .metadata: return "Step 4: Metadata"
-            case .save: return "Step 5: Save"
+            case .preview: return "Step 4: Preview"
+            case .metadata: return "Step 5: Metadata"
+            case .save: return "Step 6: Save"
             }
         }
     }
@@ -29,7 +31,7 @@ final class NewProjectWizardViewModel: ObservableObject {
     @Published var cropRectNormalized = CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8)
     @Published var draft = EntryDraft()
     @Published var selectedHoldID: UUID?
-    @Published var orderingMode = false
+    @Published var annotateMode = false
 
     var sourceImage: UIImage? { UIImage(data: sourceImageData) }
     var croppedImage: UIImage? { UIImage(data: croppedImageData) }
@@ -62,7 +64,7 @@ final class NewProjectWizardViewModel: ObservableObject {
 
     func selectOrAssignOrder(holdID: UUID) {
         selectedHoldID = holdID
-        guard orderingMode else { return }
+        guard annotateMode else { return }
         let maxOrder = draft.holds.compactMap(\.orderIndex).max() ?? 0
         if let idx = draft.holds.firstIndex(where: { $0.id == holdID }) {
             draft.holds[idx].orderIndex = maxOrder + 1
@@ -80,7 +82,7 @@ final class NewProjectWizardViewModel: ObservableObject {
         selectedHoldID = nil
     }
 
-    func clearOrdering() {
+    func clearAnnotations() {
         for index in draft.holds.indices {
             draft.holds[index].orderIndex = nil
         }
@@ -102,7 +104,8 @@ final class NewProjectWizardViewModel: ObservableObject {
         switch step {
         case .photo: return !sourceImageData.isEmpty
         case .crop: return !croppedImageData.isEmpty
-        case .holds: return !draft.holds.isEmpty
+        case .holds: return true
+        case .preview: return true
         case .metadata: return !draft.grade.isEmpty
         case .save: return true
         }

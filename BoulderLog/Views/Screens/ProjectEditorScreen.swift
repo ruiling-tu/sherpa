@@ -9,6 +9,8 @@ struct NewProjectWizardScreen: View {
 
     @StateObject private var vm = NewProjectWizardViewModel()
     @State private var showCamera = false
+    @AppStorage(AICardSettings.modelKey) private var selectedPreviewModel = AICardSettings.defaultModel
+    @State private var previewRefreshToken = 0
 
     var body: some View {
         NavigationStack {
@@ -17,7 +19,7 @@ struct NewProjectWizardScreen: View {
                     VStack(alignment: .leading, spacing: DojoSpace.xs) {
                         Text(vm.step.title)
                             .font(DojoType.title)
-                        Text("Step \(vm.step.rawValue + 1) of 5")
+                        Text("Step \(vm.step.rawValue + 1) of \(NewProjectWizardViewModel.Step.allCases.count)")
                             .font(DojoType.caption)
                             .foregroundStyle(DojoTheme.textSecondary)
                     }
@@ -119,18 +121,18 @@ struct NewProjectWizardScreen: View {
                     DojoSurface(cornerRadius: 14) {
                         VStack(alignment: .leading, spacing: DojoSpace.sm) {
                             HStack {
-                                Toggle("Ordering mode", isOn: $vm.orderingMode)
+                                Toggle("Annotate holds", isOn: $vm.annotateMode)
                                     .tint(DojoTheme.accentPrimary)
                                     .font(DojoType.body)
                                 Spacer()
-                                Button("Clear Order") {
-                                    vm.clearOrdering()
+                                Button("Clear") {
+                                    vm.clearAnnotations()
                                 }
                                 .font(DojoType.caption)
                                 .foregroundStyle(DojoTheme.textSecondary)
                             }
 
-                            Text("Ordering controls stay below the image. Tap holds to assign sequence while Ordering mode is on.")
+                            Text("When annotation is on, tap holds to set sequence order for route guidance.")
                                 .font(DojoType.caption)
                                 .foregroundStyle(DojoTheme.textSecondary)
                         }
@@ -145,6 +147,52 @@ struct NewProjectWizardScreen: View {
                                 .foregroundStyle(DojoTheme.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                    }
+                }
+            }
+        case .preview:
+            if let image = vm.croppedImage {
+                DojoSurface {
+                    VStack(alignment: .leading, spacing: DojoSpace.md) {
+                        DojoSectionHeader(title: "2D Problem Card Preview", subtitle: "Generate before filling metadata")
+
+                        HStack(spacing: DojoSpace.sm) {
+                            Menu {
+                                ForEach(AICardSettings.modelPresets, id: \.id) { option in
+                                    Button(selectedPreviewModel == option.id ? "\(option.title) ✓" : option.title) {
+                                        selectedPreviewModel = option.id
+                                        previewRefreshToken += 1
+                                    }
+                                }
+                            } label: {
+                                Text("Model: \(AICardSettings.title(for: selectedPreviewModel))")
+                                    .font(DojoType.caption)
+                                    .padding(.horizontal, DojoSpace.sm)
+                                    .padding(.vertical, 7)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Color.white.opacity(0.75))
+                                            .overlay(Capsule(style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer()
+
+                            Button("Regenerate") {
+                                previewRefreshToken += 1
+                            }
+                            .font(DojoType.caption)
+                            .foregroundStyle(DojoTheme.accentPrimary)
+                        }
+
+                        DraftProblemCardPreview(
+                            image: image,
+                            grade: vm.draft.grade,
+                            holds: vm.draft.holds,
+                            refreshToken: previewRefreshToken
+                        )
+                        .frame(height: 240)
                     }
                 }
             }
@@ -228,6 +276,41 @@ struct NewProjectWizardScreen: View {
         let repo = ProjectRepository(context: context)
         try? repo.createEntry(in: session, draft: vm.draft)
         dismiss()
+    }
+}
+
+private struct DraftProblemCardPreview: View {
+    let image: UIImage
+    let grade: String
+    let holds: [HoldDraft]
+    let refreshToken: Int
+
+    private static let previewEntryID = UUID(uuidString: "00000000-0000-0000-0000-00000000D031")!
+
+    var body: some View {
+        ProblemCard2DView(
+            entryID: Self.previewEntryID,
+            holds: transientHolds,
+            sourceImage: image,
+            grade: grade,
+            refreshTrigger: refreshToken,
+            onTapHold: { _ in }
+        )
+    }
+
+    private var transientHolds: [HoldEntity] {
+        holds.map {
+            HoldEntity(
+                id: $0.id,
+                xNormalized: $0.xNormalized,
+                yNormalized: $0.yNormalized,
+                radius: $0.radius,
+                role: $0.role,
+                orderIndex: $0.orderIndex,
+                note: $0.note,
+                holdType: $0.holdType
+            )
+        }
     }
 }
 

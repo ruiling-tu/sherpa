@@ -231,6 +231,7 @@ private struct LibraryCard: View {
         DojoSurface {
             VStack(alignment: .leading, spacing: DojoSpace.sm) {
                 ProblemCard2DView(
+                    entryID: entry.id,
                     holds: entry.holds,
                     sourceImage: ImageStore.load(path: entry.imagePath),
                     grade: entry.grade,

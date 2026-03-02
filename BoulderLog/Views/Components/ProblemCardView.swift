@@ -1,13 +1,44 @@
 import SwiftUI
 
 struct ProblemCard2DView: View {
+    let entryID: UUID
     let holds: [HoldEntity]
     let sourceImage: UIImage?
     let grade: String
+    var refreshTrigger: Int = 0
     let onTapHold: (HoldEntity) -> Void
+
+    @AppStorage(AICardSettings.enabledKey) private var aiEnabled = true
+    @AppStorage(AICardSettings.apiKeyKey) private var apiKey = AICardSettings.bundledDefaultAPIKey
+    @AppStorage(AICardSettings.modelKey) private var model = AICardSettings.defaultModel
+
+    @State private var aiImage: UIImage?
+    @State private var isGenerating = false
+    @State private var lastHandledRefreshTrigger = 0
 
     private var sortedHolds: [HoldEntity] {
         holds.sorted { ($0.orderIndex ?? 999) < ($1.orderIndex ?? 999) }
+    }
+
+    private var holdSpecs: [HoldRenderSpec] {
+        sortedHolds.map {
+            HoldRenderSpec(
+                id: $0.id,
+                x: $0.xNormalized,
+                y: $0.yNormalized,
+                radius: $0.radius,
+                role: $0.role,
+                orderIndex: $0.orderIndex
+            )
+        }
+    }
+
+    private var signature: String {
+        "\(ProblemCardPromptFactory.signature(grade: grade, holds: holdSpecs))-\(model)"
+    }
+
+    private var aiTaskKey: String {
+        "\(entryID.uuidString)-\(signature)-\(aiEnabled)-\(model)-\(refreshTrigger)-\(!apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)"
     }
 
     private var patches: [HoldPatch] {
@@ -21,7 +52,6 @@ struct ProblemCard2DView: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.white.opacity(0.86))
 
-                // Collectible-style frame by grade difficulty.
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(HoldShapeRenderer.frameColor(for: grade).opacity(0.82), lineWidth: 2)
                     .overlay(
@@ -30,27 +60,81 @@ struct ProblemCard2DView: View {
                             .stroke(HoldShapeRenderer.frameColor(for: grade).opacity(0.28), lineWidth: 1)
                     )
 
-                ForEach(renderPatches) { patch in
-                    let x = geo.size.width * patch.x
-                    let y = geo.size.height * patch.y
-                    let size = patchSize(for: patch, container: geo.size)
+                if let aiImage {
+                    aiCard(image: aiImage, geo: geo)
+                } else {
+                    ForEach(renderPatches) { patch in
+                        let x = geo.size.width * patch.x
+                        let y = geo.size.height * patch.y
+                        let size = patchSize(for: patch, container: geo.size)
 
-                    StylizedHoldShape(
-                        patch: patch,
-                        size: size,
-                        isStart: patch.role == .start,
-                        isFinish: patch.role == .finish
-                    )
-                    .position(x: x, y: y)
-                    .onTapGesture {
-                        if let hold = sortedHolds.first(where: { $0.id == patch.id }) {
-                            onTapHold(hold)
+                        StylizedHoldShape(
+                            patch: patch,
+                            size: size,
+                            isStart: patch.role == .start,
+                            isFinish: patch.role == .finish
+                        )
+                        .position(x: x, y: y)
+                        .onTapGesture {
+                            if let hold = sortedHolds.first(where: { $0.id == patch.id }) {
+                                onTapHold(hold)
+                            }
                         }
                     }
+                }
+
+                if isGenerating, aiImage == nil {
+                    ProgressView()
+                        .controlSize(.small)
+                        .padding(.horizontal, DojoSpace.sm)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.white.opacity(0.75))
+                        )
                 }
             }
         }
         .frame(height: 220)
+        .task(id: aiTaskKey) {
+            await resolveAICardIfNeeded()
+        }
+    }
+
+    @ViewBuilder
+    private func aiCard(image: UIImage, geo: GeometryProxy) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(width: geo.size.width - 18, height: geo.size.height - 18)
+
+        ForEach(sortedHolds) { hold in
+            let x = geo.size.width * hold.xNormalized
+            let y = geo.size.height * hold.yNormalized
+            let base = max(28, min(56, CGFloat(hold.radius) * min(geo.size.width, geo.size.height) * 2.5))
+
+            ZStack {
+                if let order = hold.orderIndex {
+                    Text("\(order)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(DojoTheme.textPrimary.opacity(0.72))
+                        .padding(4)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(0.38))
+                        )
+                }
+
+                Circle()
+                    .fill(Color.clear)
+                    .frame(width: base, height: base)
+                    .contentShape(Circle())
+            }
+            .position(x: x, y: y)
+            .onTapGesture {
+                onTapHold(hold)
+            }
+        }
     }
 
     private var renderPatches: [HoldPatch] {
@@ -58,7 +142,6 @@ struct ProblemCard2DView: View {
             return patches
         }
 
-        // Fallback for entries missing source image.
         return sortedHolds.map {
             HoldPatch(
                 id: $0.id,
@@ -83,6 +166,38 @@ struct ProblemCard2DView: View {
         }
 
         return CGSize(width: base, height: base / ratio)
+    }
+
+    @MainActor
+    private func resolveAICardIfNeeded() async {
+        if refreshTrigger > lastHandledRefreshTrigger {
+            ProblemCardImageStore.invalidate(entryID: entryID)
+            aiImage = nil
+            lastHandledRefreshTrigger = refreshTrigger
+        }
+
+        aiImage = ProblemCardImageStore.load(entryID: entryID, signature: signature)
+        guard aiImage == nil else { return }
+
+        guard aiEnabled,
+              !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let sourceImage else {
+            isGenerating = false
+            return
+        }
+
+        isGenerating = true
+        let generated = await ProblemCardImagePipeline.shared.loadOrGenerate(
+            entryID: entryID,
+            signature: signature,
+            sourceImage: sourceImage,
+            holds: holdSpecs,
+            grade: grade
+        )
+        if let generated {
+            aiImage = generated
+        }
+        isGenerating = false
     }
 }
 
