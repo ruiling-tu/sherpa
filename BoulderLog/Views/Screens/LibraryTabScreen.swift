@@ -10,9 +10,10 @@ struct LibraryTabScreen: View {
     @State private var selectedAngles: Set<WallAngle> = []
     @State private var selectedGym: String?
     @State private var selectedTags: Set<String> = []
-    @State private var startDate = Calendar.current.date(byAdding: .month, value: -6, to: Date()) ?? Date()
-    @State private var endDate = Date()
+    @State private var startDate = Date.distantPast
+    @State private var endDate = Date.distantFuture
     @State private var showFilters = false
+    @State private var didSeedDateRange = false
 
     private let grid = [GridItem(.flexible(), spacing: DojoSpace.md), GridItem(.flexible(), spacing: DojoSpace.md)]
 
@@ -68,6 +69,12 @@ struct LibraryTabScreen: View {
             .searchable(text: $query, prompt: "Search notes")
             .toolbarBackground(DojoTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .onAppear {
+                seedDateRangeIfNeeded()
+            }
+            .onChange(of: entries.count) { _, _ in
+                seedDateRangeIfNeeded()
+            }
         }
     }
 
@@ -205,6 +212,15 @@ struct LibraryTabScreen: View {
 
     private func toggleAngle(_ angle: WallAngle) {
         if selectedAngles.contains(angle) { selectedAngles.remove(angle) } else { selectedAngles.insert(angle) }
+    }
+
+    private func seedDateRangeIfNeeded() {
+        guard !didSeedDateRange, !entries.isEmpty else { return }
+        let minDate = entries.map(\.createdAt).min() ?? Date()
+        let maxDate = entries.map(\.createdAt).max() ?? Date()
+        startDate = Calendar.current.startOfDay(for: minDate)
+        endDate = Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: maxDate) ?? maxDate
+        didSeedDateRange = true
     }
 }
 

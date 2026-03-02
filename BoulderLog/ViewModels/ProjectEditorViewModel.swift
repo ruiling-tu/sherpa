@@ -80,6 +80,12 @@ final class NewProjectWizardViewModel: ObservableObject {
         selectedHoldID = nil
     }
 
+    func clearOrdering() {
+        for index in draft.holds.indices {
+            draft.holds[index].orderIndex = nil
+        }
+    }
+
     func selectedHoldBinding() -> Binding<HoldDraft>? {
         guard let selectedHoldID,
               let idx = draft.holds.firstIndex(where: { $0.id == selectedHoldID }) else {

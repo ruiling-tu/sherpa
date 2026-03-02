@@ -9,8 +9,6 @@ struct NewProjectWizardScreen: View {
 
     @StateObject private var vm = NewProjectWizardViewModel()
     @State private var showCamera = false
-    @State private var orderingPanelOffset: CGSize = .zero
-    @State private var orderingPanelCollapsed = false
 
     var body: some View {
         NavigationStack {
@@ -105,7 +103,7 @@ struct NewProjectWizardScreen: View {
             }
         case .holds:
             if let image = vm.croppedImage {
-                ZStack(alignment: .bottomTrailing) {
+                VStack(spacing: DojoSpace.md) {
                     DojoSurface {
                         HoldEditorCanvas(
                             image: image,
@@ -118,21 +116,36 @@ struct NewProjectWizardScreen: View {
                         .frame(maxHeight: 500)
                     }
 
-                    OrderingFloatingPanel(
-                        orderingMode: $vm.orderingMode,
-                        collapsed: $orderingPanelCollapsed,
-                        offset: $orderingPanelOffset
-                    ) {
+                    DojoSurface(cornerRadius: 14) {
+                        VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                            HStack {
+                                Toggle("Ordering mode", isOn: $vm.orderingMode)
+                                    .tint(DojoTheme.accentPrimary)
+                                    .font(DojoType.body)
+                                Spacer()
+                                Button("Clear Order") {
+                                    vm.clearOrdering()
+                                }
+                                .font(DojoType.caption)
+                                .foregroundStyle(DojoTheme.textSecondary)
+                            }
+
+                            Text("Ordering controls stay below the image. Tap holds to assign sequence while Ordering mode is on.")
+                                .font(DojoType.caption)
+                                .foregroundStyle(DojoTheme.textSecondary)
+                        }
+                    }
+
+                    DojoSurface(cornerRadius: 14) {
                         if let binding = vm.selectedHoldBinding() {
                             HoldDraftEditor(hold: binding)
                         } else {
                             Text("Tap a hold to edit role, type, and note.")
                                 .font(DojoType.caption)
                                 .foregroundStyle(DojoTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                    .padding(.trailing, DojoSpace.md)
-                    .padding(.bottom, DojoSpace.md)
                 }
             }
         case .metadata:
@@ -215,75 +228,6 @@ struct NewProjectWizardScreen: View {
         let repo = ProjectRepository(context: context)
         try? repo.createEntry(in: session, draft: vm.draft)
         dismiss()
-    }
-}
-
-private struct OrderingFloatingPanel<Content: View>: View {
-    @Binding var orderingMode: Bool
-    @Binding var collapsed: Bool
-    @Binding var offset: CGSize
-    @ViewBuilder let content: () -> Content
-    @State private var dragStartOffset: CGSize = .zero
-    @State private var dragInitialized = false
-
-    var body: some View {
-        Group {
-            if collapsed {
-                DojoSurface(cornerRadius: 14) {
-                    HStack(spacing: DojoSpace.sm) {
-                        Text(orderingMode ? "Ordering On" : "Ordering Off")
-                            .font(DojoType.caption)
-                        Button {
-                            collapsed = false
-                        } label: {
-                            Image(systemName: "chevron.up")
-                        }
-                    }
-                }
-                .frame(width: 164)
-            } else {
-                DojoSurface(cornerRadius: 16) {
-                    VStack(alignment: .leading, spacing: DojoSpace.sm) {
-                        HStack {
-                            Image(systemName: "line.3.horizontal")
-                                .foregroundStyle(DojoTheme.textSecondary)
-                            Text("Hold Controls")
-                                .font(DojoType.caption)
-                                .foregroundStyle(DojoTheme.textSecondary)
-                            Spacer()
-                            Button {
-                                collapsed = true
-                            } label: {
-                                Image(systemName: "minus")
-                                    .foregroundStyle(DojoTheme.textSecondary)
-                            }
-                        }
-                        Toggle("Ordering mode", isOn: $orderingMode)
-                            .tint(DojoTheme.accentPrimary)
-                            .font(DojoType.body)
-                        content()
-                    }
-                }
-                .frame(maxWidth: 320)
-            }
-        }
-        .offset(offset)
-        .gesture(
-            DragGesture()
-                .onChanged { value in
-                    if !dragInitialized {
-                        dragStartOffset = offset
-                        dragInitialized = true
-                    }
-                    offset = CGSize(
-                        width: dragStartOffset.width + value.translation.width,
-                        height: dragStartOffset.height + value.translation.height
-                    )
-                }
-                .onEnded { _ in
-                    dragInitialized = false
-                }
-        )
     }
 }
 
