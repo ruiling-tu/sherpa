@@ -42,7 +42,7 @@ struct AnalyticsService {
 
     func suggestions(entries: [ProjectEntryEntity]) -> [SuggestionItem] {
         guard !entries.isEmpty else {
-            return [SuggestionItem(title: "Add more logs", detail: "Insights improve once you record more projects and attempts.")]
+            return [SuggestionItem(title: "Keep logging", detail: "Insights become clearer as you add more sessions and projects.")]
         }
 
         var result: [SuggestionItem] = []
@@ -52,7 +52,7 @@ struct AnalyticsService {
             let sloperNotSent = notSent.filter { $0.holdTypeTags.contains(.sloper) }
             let ratio = Double(sloperNotSent.count) / Double(notSent.count)
             if ratio > 0.4 {
-                result.append(SuggestionItem(title: "Sloper trend", detail: "Over 40% of unsent projects include slopers. Focus on sloper grip and open-hand drills."))
+                result.append(SuggestionItem(title: "Sloper trend", detail: "More attempts on slopers may improve open-hand strength and grip confidence."))
             }
         }
 
@@ -62,16 +62,16 @@ struct AnalyticsService {
             let sentCount = overhang.filter { $0.status == .sent || $0.status == .flashed }.count
             let sendRate = Double(sentCount) / Double(overhang.count)
             if totalAttempts >= overhang.count * 4 && sendRate < 0.35 {
-                result.append(SuggestionItem(title: "Overhang efficiency", detail: "Overhang attempts are high while send rate is low. Add core tension and toe-hook practice."))
+                result.append(SuggestionItem(title: "Overhang progression", detail: "More core tension and toe-hook practice may help overhang attempts convert into sends."))
             }
         }
 
         let crimpFails = entries.filter { $0.status == .attempted && $0.holdTypeTags.contains(.crimp) && $0.attempts >= 3 }
         if crimpFails.count >= 2 {
-            result.append(SuggestionItem(title: "Crimp fatigue", detail: "Repeated non-sends on crimp-heavy projects suggest crimp endurance and foot precision drills."))
+            result.append(SuggestionItem(title: "Crimp consistency", detail: "Crimp-focused endurance and careful foot precision may support cleaner attempts."))
         }
 
-        return result.isEmpty ? [SuggestionItem(title: "Progress is balanced", detail: "No dominant weakness detected from current logs.")] : result
+        return result.isEmpty ? [SuggestionItem(title: "Balanced progress", detail: "Your current logs show a steady distribution across styles and techniques.")] : result
     }
 
     func gradeValue(_ grade: String) -> Int {

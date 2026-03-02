@@ -15,63 +15,91 @@ struct InsightsScreen: View {
         let suggestions = analytics.suggestions(entries: entries)
 
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    GroupBox("Max Grade Sent per Month") {
-                        Chart(trend) { point in
-                            LineMark(
-                                x: .value("Month", point.bucketDate, unit: .month),
-                                y: .value("Grade", point.maxSentGradeValue)
-                            )
-                            PointMark(
-                                x: .value("Month", point.bucketDate, unit: .month),
-                                y: .value("Grade", point.maxSentGradeValue)
-                            )
-                        }
-                        .frame(height: 180)
-                    }
+            DojoScreen {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DojoSpace.lg) {
+                        DojoSectionHeader(title: "Insights", subtitle: "Calm trends from your training log")
 
-                    GroupBox("Attempt Volume by Grade") {
-                        Chart(attempts, id: \.0) { row in
-                            BarMark(
-                                x: .value("Grade", row.0),
-                                y: .value("Attempts", row.1)
-                            )
-                        }
-                        .frame(height: 180)
-                    }
-
-                    metricBox(title: "Wall Angle", rows: wall.map { ($0.0.title, $0.1) })
-                    metricBox(title: "Hold Type Tags", rows: hold.map { ($0.0.title, $0.1) })
-                    metricBox(title: "Technique Tags", rows: technique.map { ($0.0.title, $0.1) })
-
-                    GroupBox("Suggestions") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(suggestions) { item in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.title).font(.subheadline.bold())
-                                    Text(item.detail).font(.footnote)
+                        DojoSurface {
+                            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                                Text("Max grade sent per month")
+                                    .font(DojoType.section)
+                                Chart(trend) { point in
+                                    LineMark(
+                                        x: .value("Month", point.bucketDate, unit: .month),
+                                        y: .value("Grade", point.maxSentGradeValue)
+                                    )
+                                    .foregroundStyle(DojoTheme.accentSecondary)
+                                    PointMark(
+                                        x: .value("Month", point.bucketDate, unit: .month),
+                                        y: .value("Grade", point.maxSentGradeValue)
+                                    )
+                                    .foregroundStyle(DojoTheme.accentSecondary)
                                 }
-                                Divider()
+                                .chartYAxis {
+                                    AxisMarks(stroke: StrokeStyle(lineWidth: 0.6))
+                                }
+                                .frame(height: 180)
+                            }
+                        }
+
+                        DojoSurface {
+                            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                                Text("Attempt volume by grade")
+                                    .font(DojoType.section)
+                                Chart(attempts, id: \.0) { row in
+                                    BarMark(
+                                        x: .value("Grade", row.0),
+                                        y: .value("Attempts", row.1)
+                                    )
+                                    .foregroundStyle(DojoTheme.accentPrimary.opacity(0.85))
+                                }
+                                .frame(height: 180)
+                            }
+                        }
+
+                        metricBox(title: "Wall Angle", rows: wall.map { ($0.0.title, $0.1) })
+                        metricBox(title: "Hold Type Tags", rows: hold.map { ($0.0.title, $0.1) })
+                        metricBox(title: "Technique Tags", rows: technique.map { ($0.0.title, $0.1) })
+
+                        DojoSurface {
+                            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                                DojoSectionHeader(title: "Suggestions")
+                                ForEach(suggestions) { item in
+                                    VStack(alignment: .leading, spacing: DojoSpace.xs) {
+                                        Text(item.title)
+                                            .font(DojoType.body.weight(.medium))
+                                        Text(item.detail)
+                                            .font(DojoType.caption)
+                                            .foregroundStyle(DojoTheme.textSecondary)
+                                    }
+                                    .padding(.vertical, DojoSpace.xs)
+                                }
                             }
                         }
                     }
+                    .padding(.vertical, DojoSpace.lg)
                 }
-                .padding()
             }
             .navigationTitle("Insights")
         }
     }
 
     private func metricBox(title: String, rows: [(String, Int)]) -> some View {
-        GroupBox(title) {
-            ForEach(rows, id: \.0) { row in
-                HStack {
-                    Text(row.0)
-                    Spacer()
-                    Text("\(row.1)")
+        DojoSurface {
+            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                Text(title)
+                    .font(DojoType.section)
+                ForEach(rows, id: \.0) { row in
+                    HStack {
+                        Text(row.0)
+                            .font(DojoType.body)
+                        Spacer()
+                        Text("\(row.1)")
+                            .font(DojoType.body)
+                            .foregroundStyle(DojoTheme.textSecondary)
+                    }
                 }
-                Divider()
             }
         }
     }

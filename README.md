@@ -1,43 +1,49 @@
-# BoulderLog iOS MVP (Milestones 1-5)
+# BoulderLog iOS App
 
-Implemented UX and screen requirements:
+BoulderLog is an iOS app for logging bouldering sessions and projects with a manual-first hold marking workflow.
+
+## What is implemented
+
 - Tabs: `Log`, `Library`, `Insights`, `Settings`
-- Log flow: session list, create session, session detail, add project
-- New Project Wizard (5 steps): Photo, Crop, Holds, Metadata+Notes, Save
-- Project detail: photo overlay toggle, 2D problem card, metadata/tags, per-hold editor
-- Library: list + filters + notes search
-- Insights: max sent grade per month, attempt volume, distributions, dynamic suggestions
+- Session list and session detail with project entries
+- 5-step New Project wizard: photo, crop, holds, metadata, save
+- Project detail with photo overlay, 2D problem card, hold-note editing
+- Library filters + search
+- Insights charts + rules-based suggestions
+- SwiftData persistence + local compressed image storage
+- Frosted Dojo visual design system
 
-## Persistence
+## Design system
 
-- Uses SwiftData models:
-  - `SessionEntity`
-  - `ProjectEntryEntity`
-  - `HoldEntity`
-- Repository layer with CRUD:
-  - sessions
-  - entries
-  - holds
-- Image persistence helper:
-  - compressed JPEG save/load/delete in app Documents
+Reusable Dojo components are in:
+- `BoulderLog/Utilities/DojoTheme.swift`
 
-## Correctness-critical rendering
+Includes:
+- `DojoScreen`
+- `DojoSurface`
+- `DojoButtonPrimary`
+- `DojoButtonSecondary`
+- `DojoTagChip`
+- `DojoSectionHeader`
+- `DojoEmptyState`
+- `DojoHoldMarker`
 
-- Shared transform utility (`ImageSpaceTransform`) is used for:
-  - tap-to-normalized hold coordinates
-  - overlay rendering on photo
-  - consistent position mapping across devices
-- 2D problem card uses normalized coordinates and role-specific colors for start/finish/normal.
+## Open and run
 
-## Seed Data
+1. Open `BoulderLog.xcodeproj` in Xcode.
+2. Choose scheme `BoulderLog`.
+3. Set your signing team in target settings.
+4. Build and run (iOS 17+).
 
-- First launch inserts sample session + project + holds for testability.
+## App logo / AppIcon
 
-## Run
+The project includes `Assets.xcassets` and an `AppIcon.appiconset` template.
 
-1. Create or open your iOS app target in Xcode (iOS 17+).
-2. Add all files under `/Users/ruilingtu/Codex Projects /Sherpa/BoulderLog` into the target.
-3. Ensure these privacy keys are present in Info.plist:
-   - Camera usage description
-   - Photo library usage description
-4. Build and run.
+To generate all required icon sizes from your logo source image:
+
+```bash
+cd "/Users/ruilingtu/Codex Projects /Sherpa"
+./scripts/generate_appicon.sh /absolute/path/to/your-logo-image.png
+```
+
+Then in Xcode target build settings, set `App Icons Source` to `AppIcon` if not already set.

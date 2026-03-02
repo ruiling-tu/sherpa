@@ -1,6 +1,14 @@
 import SwiftUI
 
 struct RootTabView: View {
+    init() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = UIColor(DojoTheme.surface.opacity(0.85))
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+
     var body: some View {
         TabView {
             LogTabScreen()
@@ -15,5 +23,6 @@ struct RootTabView: View {
             SettingsScreen()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
+        .tint(DojoTheme.accentPrimary)
     }
 }

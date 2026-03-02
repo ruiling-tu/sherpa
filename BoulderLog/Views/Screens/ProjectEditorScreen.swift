@@ -12,17 +12,43 @@ struct NewProjectWizardScreen: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                Text(vm.step.title).font(.headline)
-                stepView
-                footer
+            DojoScreen {
+                VStack(spacing: DojoSpace.lg) {
+                    VStack(alignment: .leading, spacing: DojoSpace.xs) {
+                        Text(vm.step.title)
+                            .font(DojoType.title)
+                        Text("Step \(vm.step.rawValue + 1) of 5")
+                            .font(DojoType.caption)
+                            .foregroundStyle(DojoTheme.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    stepView
+                        .frame(maxHeight: .infinity)
+
+                    if vm.step != .photo {
+                        DojoButtonSecondary(title: "Back") { vm.goBack() }
+                    }
+
+                    DojoButtonPrimary(
+                        title: vm.step == .save ? "Save Project" : "Continue",
+                        disabled: !vm.canProceed()
+                    ) {
+                        if vm.step == .save {
+                            saveProject()
+                        } else {
+                            vm.goNext()
+                        }
+                    }
+                }
+                .padding(.vertical, DojoSpace.lg)
             }
-            .padding()
             .navigationTitle("New Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
+                        .foregroundStyle(DojoTheme.textSecondary)
                 }
             }
             .sheet(isPresented: $showCamera) {
@@ -37,123 +63,149 @@ struct NewProjectWizardScreen: View {
     private var stepView: some View {
         switch vm.step {
         case .photo:
-            VStack(spacing: 16) {
-                if let source = vm.sourceImage {
-                    Image(uiImage: source)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 320)
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.secondary.opacity(0.12))
-                        .frame(height: 220)
-                        .overlay { Text("Select a wall photo") }
-                }
+            DojoSurface {
+                VStack(spacing: DojoSpace.lg) {
+                    if let source = vm.sourceImage {
+                        Image(uiImage: source)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 340)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    } else {
+                        DojoEmptyState(title: "Select a wall photo", subtitle: "Capture with camera or import from Photos.", icon: "photo")
+                    }
 
-                HStack {
-                    PhotoImportButton { data in vm.sourceImageData = data }
-                    Button("Capture Camera", systemImage: "camera") {
-                        showCamera = true
+                    HStack(spacing: DojoSpace.md) {
+                        PhotoImportButton { data in vm.sourceImageData = data }
+                            .tint(DojoTheme.accentSecondary)
+                        Button {
+                            showCamera = true
+                        } label: {
+                            Label("Capture", systemImage: "camera")
+                                .font(DojoType.body)
+                        }
+                        .foregroundStyle(DojoTheme.textPrimary)
                     }
                 }
             }
         case .crop:
             if let image = vm.sourceImage {
-                CropStepView(image: image, normalizedRect: $vm.cropRectNormalized)
-                    .onChange(of: vm.cropRectNormalized) { _, _ in
-                        vm.applyCrop()
-                    }
-                    .onAppear { vm.applyCrop() }
+                DojoSurface {
+                    CropStepView(image: image, normalizedRect: $vm.cropRectNormalized)
+                        .frame(maxHeight: 520)
+                        .onChange(of: vm.cropRectNormalized) { _, _ in
+                            vm.applyCrop()
+                        }
+                        .onAppear { vm.applyCrop() }
+                }
             }
         case .holds:
             if let image = vm.croppedImage {
-                VStack(spacing: 10) {
-                    Toggle("Ordering mode", isOn: $vm.orderingMode)
-
-                    HoldEditorCanvas(
-                        image: image,
-                        holds: $vm.draft.holds,
-                        selectedHoldID: $vm.selectedHoldID,
-                        onTapImage: { point in vm.addHold(at: point) },
-                        onTapHold: { id in vm.selectOrAssignOrder(holdID: id) },
-                        onLongPressHold: { id in vm.deleteHold(id: id) }
-                    )
-                    .frame(maxHeight: 430)
-
-                    if let binding = vm.selectedHoldBinding() {
-                        HoldDraftEditor(hold: binding)
+                ZStack(alignment: .bottom) {
+                    DojoSurface {
+                        HoldEditorCanvas(
+                            image: image,
+                            holds: $vm.draft.holds,
+                            selectedHoldID: $vm.selectedHoldID,
+                            onTapImage: { point in vm.addHold(at: point) },
+                            onTapHold: { id in vm.selectOrAssignOrder(holdID: id) },
+                            onLongPressHold: { id in vm.deleteHold(id: id) }
+                        )
+                        .frame(maxHeight: 500)
                     }
+
+                    VStack(spacing: DojoSpace.sm) {
+                        DojoSurface(cornerRadius: 16) {
+                            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                                Toggle("Ordering mode", isOn: $vm.orderingMode)
+                                    .tint(DojoTheme.accentPrimary)
+                                    .font(DojoType.body)
+                                if let binding = vm.selectedHoldBinding() {
+                                    HoldDraftEditor(hold: binding)
+                                } else {
+                                    Text("Tap a hold to edit role, type, and note.")
+                                        .font(DojoType.caption)
+                                        .foregroundStyle(DojoTheme.textSecondary)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, DojoSpace.md)
+                    }
+                    .padding(.bottom, DojoSpace.md)
                 }
             }
         case .metadata:
-            Form {
-                TextField("Name", text: $vm.draft.name)
+            DojoSurface {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DojoSpace.md) {
+                        TextField("Project name", text: $vm.draft.name)
+                            .textFieldStyle(.roundedBorder)
 
-                Picker("Grade", selection: $vm.draft.grade) {
-                    ForEach(GradeScale.presets, id: \.self) { grade in
-                        Text(grade).tag(grade)
+                        HStack(spacing: DojoSpace.md) {
+                            Picker("Grade", selection: $vm.draft.grade) {
+                                ForEach(GradeScale.presets, id: \.self) { grade in
+                                    Text(grade).tag(grade)
+                                }
+                            }
+                            .pickerStyle(.menu)
+
+                            TextField("Custom", text: $vm.draft.grade)
+                                .textFieldStyle(.roundedBorder)
+                        }
+
+                        Picker("Status", selection: $vm.draft.status) {
+                            ForEach(EntryStatus.allCases) { status in
+                                Text(status.title).tag(status)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Stepper("Attempts: \(vm.draft.attempts)", value: $vm.draft.attempts, in: 1...99)
+
+                        Picker("Wall Angle", selection: $vm.draft.wallAngle) {
+                            ForEach(WallAngle.allCases) { angle in
+                                Text(angle.title).tag(angle)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        TagChipSelector(title: "Style", selected: $vm.draft.styleTags, label: { $0.title })
+                        TagChipSelector(title: "Hold Type", selected: $vm.draft.holdTypeTags, label: { $0.title })
+                        TagChipSelector(title: "Technique", selected: $vm.draft.techniqueTags, label: { $0.title })
+
+                        TextField("Gym", text: $vm.draft.gym)
+                            .textFieldStyle(.roundedBorder)
+
+                        TextField("Notes", text: $vm.draft.notes, axis: .vertical)
+                            .lineLimit(4...8)
+                            .textFieldStyle(.roundedBorder)
                     }
                 }
-                TextField("Custom grade", text: $vm.draft.grade)
-
-                Picker("Status", selection: $vm.draft.status) {
-                    ForEach(EntryStatus.allCases) { status in
-                        Text(status.title).tag(status)
-                    }
-                }
-
-                Stepper("Attempts: \(vm.draft.attempts)", value: $vm.draft.attempts, in: 1...99)
-
-                Picker("Wall Angle", selection: $vm.draft.wallAngle) {
-                    ForEach(WallAngle.allCases) { angle in
-                        Text(angle.title).tag(angle)
-                    }
-                }
-
-                TagChipSelector(title: "Style", selected: $vm.draft.styleTags, label: { $0.title })
-                TagChipSelector(title: "Hold Type", selected: $vm.draft.holdTypeTags, label: { $0.title })
-                TagChipSelector(title: "Technique", selected: $vm.draft.techniqueTags, label: { $0.title })
-
-                TextField("Gym", text: $vm.draft.gym)
-                TextField("Notes", text: $vm.draft.notes, axis: .vertical)
-                    .lineLimit(4...8)
             }
         case .save:
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Review")
-                    .font(.headline)
-                Text("Name: \(vm.draft.name.isEmpty ? "Untitled" : vm.draft.name)")
-                Text("Grade: \(vm.draft.grade)")
-                Text("Status: \(vm.draft.status.title)")
-                Text("Holds: \(vm.draft.holds.count)")
-                Text("Attempts: \(vm.draft.attempts)")
+            DojoSurface {
+                VStack(alignment: .leading, spacing: DojoSpace.md) {
+                    DojoSectionHeader(title: "Review")
+                    Text("Name: \(vm.draft.name.isEmpty ? "Untitled" : vm.draft.name)")
+                        .font(DojoType.body)
+                    Text("Grade: \(vm.draft.grade)")
+                        .font(DojoType.body)
+                    Text("Status: \(vm.draft.status.title)")
+                        .font(DojoType.body)
+                    Text("Holds: \(vm.draft.holds.count)")
+                        .font(DojoType.body)
+                    Text("Attempts: \(vm.draft.attempts)")
+                        .font(DojoType.body)
 
-                if let image = vm.croppedImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    if let image = vm.croppedImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 260)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
                 }
-
-                Button("Save Project") {
-                    saveProject()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private var footer: some View {
-        HStack {
-            if vm.step != .photo {
-                Button("Back") { vm.goBack() }
-            }
-            Spacer()
-            if vm.step != .save {
-                Button("Next") { vm.goNext() }
-                    .disabled(!vm.canProceed())
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -188,8 +240,8 @@ private struct CropStepView: View {
 
                 Rectangle()
                     .path(in: cropViewRect)
-                    .stroke(Color.yellow, lineWidth: 3)
-                    .background(Rectangle().path(in: cropViewRect).fill(Color.yellow.opacity(0.15)))
+                    .stroke(DojoTheme.accentPrimary, lineWidth: 2)
+                    .background(Rectangle().path(in: cropViewRect).fill(DojoTheme.accentPrimary.opacity(0.16)))
                     .gesture(
                         DragGesture()
                             .onChanged { value in
@@ -199,24 +251,45 @@ private struct CropStepView: View {
                                 normalizedRect.origin.x = min(max(0, dragStartRect.origin.x + dx), 1 - normalizedRect.width)
                                 normalizedRect.origin.y = min(max(0, dragStartRect.origin.y + dy), 1 - normalizedRect.height)
                             }
-                            .onEnded { _ in dragStartRect = .zero }
+                            .onEnded { _ in
+                                dragStartRect = .zero
+                            }
                     )
 
                 VStack {
                     Spacer()
-                    VStack {
-                        Text("Resize")
-                        HStack {
-                            Text("W")
-                            Slider(value: Binding(get: { normalizedRect.width }, set: { normalizedRect.size.width = min(max(0.2, $0), 1) }), in: 0.2...1)
-                        }
-                        HStack {
-                            Text("H")
-                            Slider(value: Binding(get: { normalizedRect.height }, set: { normalizedRect.size.height = min(max(0.2, $0), 1) }), in: 0.2...1)
+                    DojoSurface(cornerRadius: 14) {
+                        VStack(spacing: DojoSpace.sm) {
+                            HStack {
+                                Text("Width")
+                                    .font(DojoType.caption)
+                                    .foregroundStyle(DojoTheme.textSecondary)
+                                Slider(
+                                    value: Binding(
+                                        get: { normalizedRect.width },
+                                        set: { normalizedRect.size.width = min(max(0.2, $0), 1) }
+                                    ),
+                                    in: 0.2...1
+                                )
+                                .tint(DojoTheme.accentPrimary)
+                            }
+
+                            HStack {
+                                Text("Height")
+                                    .font(DojoType.caption)
+                                    .foregroundStyle(DojoTheme.textSecondary)
+                                Slider(
+                                    value: Binding(
+                                        get: { normalizedRect.height },
+                                        set: { normalizedRect.size.height = min(max(0.2, $0), 1) }
+                                    ),
+                                    in: 0.2...1
+                                )
+                                .tint(DojoTheme.accentPrimary)
+                            }
                         }
                     }
-                    .padding(8)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.bottom, DojoSpace.sm)
                 }
             }
         }

@@ -25,31 +25,28 @@ struct HoldEditorCanvas: View {
                         imageRect: frame
                     )
 
-                    Circle()
-                        .fill(color(for: hold.role).opacity(0.25))
-                        .overlay(Circle().stroke(color(for: hold.role), lineWidth: selectedHoldID == hold.id ? 3 : 2))
-                        .frame(width: max(12, hold.radius * frame.width * 2), height: max(12, hold.radius * frame.width * 2))
-                        .overlay {
-                            if let order = hold.orderIndex {
-                                Text("\(order)").font(.caption2.bold()).foregroundStyle(.white)
+                    DojoHoldMarker(
+                        role: hold.role,
+                        diameter: max(12, hold.radius * frame.width * 2),
+                        orderText: hold.orderIndex.map(String.init),
+                        selected: selectedHoldID == hold.id
+                    )
+                    .position(center)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                guard let normalized = ImageSpaceTransform.normalizedPoint(from: value.location, imageRect: frame),
+                                      let idx = holds.firstIndex(where: { $0.id == hold.id }) else { return }
+                                holds[idx].xNormalized = normalized.x
+                                holds[idx].yNormalized = normalized.y
                             }
-                        }
-                        .position(center)
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    guard let normalized = ImageSpaceTransform.normalizedPoint(from: value.location, imageRect: frame),
-                                          let idx = holds.firstIndex(where: { $0.id == hold.id }) else { return }
-                                    holds[idx].xNormalized = normalized.x
-                                    holds[idx].yNormalized = normalized.y
-                                }
-                                .onEnded { _ in
-                                    onTapHold(hold.id)
-                                }
-                        )
-                        .onLongPressGesture {
-                            onLongPressHold(hold.id)
-                        }
+                            .onEnded { _ in
+                                onTapHold(hold.id)
+                            }
+                    )
+                    .onLongPressGesture {
+                        onLongPressHold(hold.id)
+                    }
                 }
             }
             .contentShape(Rectangle())
@@ -60,14 +57,6 @@ struct HoldEditorCanvas: View {
                         onTapImage(normalized)
                     }
             )
-        }
-    }
-
-    private func color(for role: HoldRole) -> Color {
-        switch role {
-        case .start: return .green
-        case .finish: return .red
-        case .normal: return .blue
         }
     }
 }

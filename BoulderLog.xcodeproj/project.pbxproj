@@ -30,6 +30,8 @@
 		BB0000000000000000000215 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000115 /* RootTabView.swift */; };
 		BB0000000000000000000216 /* SessionDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000116 /* SessionDetailScreen.swift */; };
 		BB0000000000000000000217 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000117 /* SettingsScreen.swift */; };
+		BB0000000000000000000218 /* DojoTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000119 /* DojoTheme.swift */; };
+		BB0000000000000000000219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000120 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +60,8 @@
 		BB0000000000000000000116 /* SessionDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailScreen.swift; sourceTree = "<group>"; };
 		BB0000000000000000000117 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		BB0000000000000000000118 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BB0000000000000000000119 /* DojoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DojoTheme.swift; sourceTree = "<group>"; };
+		BB0000000000000000000120 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,6 +147,7 @@
 			children = (
 				BB0000000000000000000109 /* ImageGeometry.swift */,
 				BB000000000000000000010A /* ImagePicker.swift */,
+				BB0000000000000000000119 /* DojoTheme.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -193,6 +198,7 @@
 		BB000000000000000000002A /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				BB0000000000000000000120 /* Assets.xcassets */,
 				BB0000000000000000000118 /* Info.plist */,
 			);
 			path = Resources;
@@ -256,6 +262,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB0000000000000000000219 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +296,7 @@
 				BB0000000000000000000215 /* RootTabView.swift in Sources */,
 				BB0000000000000000000216 /* SessionDetailScreen.swift in Sources */,
 				BB0000000000000000000217 /* SettingsScreen.swift in Sources */,
+				BB0000000000000000000218 /* DojoTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,7 +364,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 6CY3U36XC8;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BoulderLog/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -379,7 +387,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 6CY3U36XC8;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BoulderLog/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

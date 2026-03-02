@@ -3,4 +3,6 @@
 DerivedData/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+*.xcuserstate
+**/xcuserdata/
 *.swiftpm/

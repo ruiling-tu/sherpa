@@ -9,22 +9,36 @@ struct LogTabScreen: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(sessions) { session in
-                    NavigationLink {
-                        SessionDetailScreen(session: session)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(session.title).font(.headline)
-                            Text(session.date, style: .date).foregroundStyle(.secondary)
-                            if !session.gym.isEmpty {
-                                Text(session.gym).font(.caption).foregroundStyle(.secondary)
+            DojoScreen {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DojoSpace.lg) {
+                        if sessions.isEmpty {
+                            DojoEmptyState(
+                                title: "No sessions yet",
+                                subtitle: "Create a session to start logging your projects.",
+                                icon: "calendar"
+                            )
+                        } else {
+                            ForEach(sessions) { session in
+                                NavigationLink {
+                                    SessionDetailScreen(session: session)
+                                } label: {
+                                    SessionCard(session: session)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        let repo = ProjectRepository(context: context)
+                                        try? repo.deleteSession(session)
+                                    } label: {
+                                        Label("Delete Session", systemImage: "trash")
+                                    }
+                                }
                             }
-                            Text("\(session.entries.count) entries").font(.caption2).foregroundStyle(.secondary)
                         }
                     }
+                    .padding(.vertical, DojoSpace.lg)
                 }
-                .onDelete(perform: deleteSessions)
             }
             .navigationTitle("Log")
             .toolbar {
@@ -32,8 +46,9 @@ struct LogTabScreen: View {
                     Button {
                         showCreateSession = true
                     } label: {
-                        Label("Create Session", systemImage: "plus")
+                        Text("New Session")
                     }
+                    .foregroundStyle(DojoTheme.accentPrimary)
                 }
             }
             .sheet(isPresented: $showCreateSession) {
@@ -41,12 +56,33 @@ struct LogTabScreen: View {
             }
         }
     }
+}
 
-    private func deleteSessions(at offsets: IndexSet) {
-        let repo = ProjectRepository(context: context)
-        for idx in offsets {
-            let session = sessions[idx]
-            try? repo.deleteSession(session)
+private struct SessionCard: View {
+    let session: SessionEntity
+
+    var body: some View {
+        DojoSurface {
+            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                Text(session.date.formatted(.dateTime.month(.wide).day().year()))
+                    .font(DojoType.title)
+                    .foregroundStyle(DojoTheme.textPrimary)
+
+                Text(session.title)
+                    .font(DojoType.section)
+
+                HStack(spacing: DojoSpace.md) {
+                    if !session.gym.isEmpty {
+                        Text(session.gym)
+                            .font(DojoType.caption)
+                            .foregroundStyle(DojoTheme.textSecondary)
+                    }
+                    Text("\(session.entries.count) projects")
+                        .font(DojoType.caption)
+                        .foregroundStyle(DojoTheme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -61,24 +97,32 @@ private struct CreateSessionSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                TextField("Session title", text: $title)
-                DatePicker("Date", selection: $date, displayedComponents: .date)
-                TextField("Gym", text: $gym)
-            }
-            .navigationTitle("Create Session")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+            DojoScreen {
+                VStack(spacing: DojoSpace.lg) {
+                    DojoSurface {
+                        VStack(alignment: .leading, spacing: DojoSpace.md) {
+                            DojoSectionHeader(title: "Create Session")
+                            TextField("Session title", text: $title)
+                                .textFieldStyle(.roundedBorder)
+                            DatePicker("Date", selection: $date, displayedComponents: .date)
+                            TextField("Gym", text: $gym)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                    }
+
+                    DojoButtonPrimary(title: "Save Session") {
                         let repo = ProjectRepository(context: context)
                         try? repo.createSession(title: title.isEmpty ? "New Session" : title, date: date, gym: gym)
                         dismiss()
                     }
+
+                    DojoButtonSecondary(title: "Cancel") {
+                        dismiss()
+                    }
                 }
+                .padding(.top, DojoSpace.lg)
             }
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

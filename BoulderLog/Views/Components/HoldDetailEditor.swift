@@ -4,7 +4,7 @@ struct HoldDraftEditor: View {
     @Binding var hold: HoldDraft
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DojoSpace.sm) {
             Picker("Role", selection: $hold.role) {
                 ForEach(HoldRole.allCases) { role in
                     Text(role.title).tag(role)
@@ -18,14 +18,16 @@ struct HoldDraftEditor: View {
                 }
             }
 
-            Slider(value: $hold.radius, in: 0.02...0.1) {
-                Text("Size")
+            HStack {
+                Text("Marker Size")
+                    .font(DojoType.caption)
+                    .foregroundStyle(DojoTheme.textSecondary)
+                Slider(value: $hold.radius, in: 0.02...0.1)
+                    .tint(DojoTheme.accentSecondary)
             }
 
             TextField("Hold note", text: $hold.note)
                 .textFieldStyle(.roundedBorder)
         }
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 }

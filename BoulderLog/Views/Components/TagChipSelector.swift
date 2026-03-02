@@ -6,24 +6,29 @@ struct TagChipSelector<T: CaseIterable & Hashable & Identifiable>: View where T.
     let label: (T) -> String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.subheadline.weight(.medium))
+        VStack(alignment: .leading, spacing: DojoSpace.sm) {
+            Text(title)
+                .font(DojoType.section)
+                .foregroundStyle(DojoTheme.textPrimary)
+
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack {
+                HStack(spacing: DojoSpace.sm) {
                     ForEach(Array(T.allCases), id: \.id) { tag in
-                        let isSelected = selected.contains(tag)
-                        Button(label(tag)) {
-                            if isSelected {
-                                selected.removeAll { $0 == tag }
-                            } else {
-                                selected.append(tag)
-                            }
+                        DojoTagChip(title: label(tag), selected: selected.contains(tag)) {
+                            toggle(tag)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(isSelected ? .blue : .gray)
                     }
                 }
+                .padding(.vertical, 2)
             }
+        }
+    }
+
+    private func toggle(_ tag: T) {
+        if selected.contains(tag) {
+            selected.removeAll { $0 == tag }
+        } else {
+            selected.append(tag)
         }
     }
 }
