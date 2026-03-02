@@ -59,10 +59,13 @@ struct LibraryTabScreen: View {
                         }
                     }
                 }
-                .padding(.vertical, DojoSpace.lg)
+                .padding(.vertical, DojoSpace.md)
             }
             .navigationTitle("Library")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: "Search notes")
+            .toolbarBackground(DojoTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 

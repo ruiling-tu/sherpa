@@ -24,5 +24,7 @@ struct RootTabView: View {
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
         .tint(DojoTheme.accentPrimary)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DojoTheme.background.ignoresSafeArea())
     }
 }

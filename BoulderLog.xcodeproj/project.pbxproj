@@ -32,6 +32,7 @@
 		BB0000000000000000000217 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000117 /* SettingsScreen.swift */; };
 		BB0000000000000000000218 /* DojoTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000119 /* DojoTheme.swift */; };
 		BB0000000000000000000219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000120 /* Assets.xcassets */; };
+		BB000000000000000000021A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000121 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +63,7 @@
 		BB0000000000000000000118 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000000000000000000119 /* DojoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DojoTheme.swift; sourceTree = "<group>"; };
 		BB0000000000000000000120 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB0000000000000000000121 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,6 +202,7 @@
 			children = (
 				BB0000000000000000000120 /* Assets.xcassets */,
 				BB0000000000000000000118 /* Info.plist */,
+				BB0000000000000000000121 /* LaunchScreen.storyboard */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -263,6 +266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB0000000000000000000219 /* Assets.xcassets in Resources */,
+				BB000000000000000000021A /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

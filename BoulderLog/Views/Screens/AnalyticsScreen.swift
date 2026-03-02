@@ -82,6 +82,9 @@ struct InsightsScreen: View {
                 }
             }
             .navigationTitle("Insights")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DojoTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 

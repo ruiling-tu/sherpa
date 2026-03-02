@@ -16,6 +16,7 @@ struct BoulderLogApp: App {
     var body: some Scene {
         WindowGroup {
             RootTabView()
+                .preferredColorScheme(.light)
                 .onAppear {
                     SeedDataLoader.loadIfNeeded(context: sharedModelContainer.mainContext)
                 }

@@ -36,11 +36,13 @@ struct SessionDetailScreen: View {
                         showWizard = true
                     }
                 }
-                .padding(.vertical, DojoSpace.lg)
+                .padding(.vertical, DojoSpace.md)
             }
         }
         .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DojoTheme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .sheet(isPresented: $showWizard) {
             NewProjectWizardScreen(session: session)
         }

@@ -45,6 +45,8 @@ struct NewProjectWizardScreen: View {
             }
             .navigationTitle("New Project")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DojoTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }

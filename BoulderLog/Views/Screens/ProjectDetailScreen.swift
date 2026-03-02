@@ -67,6 +67,8 @@ struct ProjectDetailScreen: View {
         }
         .navigationTitle("Project")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DojoTheme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     private var sortedHolds: [HoldEntity] {

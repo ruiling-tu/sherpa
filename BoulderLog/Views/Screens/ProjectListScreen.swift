@@ -11,7 +11,7 @@ struct LogTabScreen: View {
         NavigationStack {
             DojoScreen {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: DojoSpace.lg) {
+                    VStack(alignment: .leading, spacing: DojoSpace.md) {
                         if sessions.isEmpty {
                             DojoEmptyState(
                                 title: "No sessions yet",
@@ -37,10 +37,11 @@ struct LogTabScreen: View {
                             }
                         }
                     }
-                    .padding(.vertical, DojoSpace.lg)
+                    .padding(.vertical, DojoSpace.md)
                 }
             }
             .navigationTitle("Log")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -51,6 +52,8 @@ struct LogTabScreen: View {
                     .foregroundStyle(DojoTheme.accentPrimary)
                 }
             }
+            .toolbarBackground(DojoTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $showCreateSession) {
                 CreateSessionSheet()
             }

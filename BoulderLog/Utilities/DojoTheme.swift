@@ -12,10 +12,11 @@ enum DojoTheme {
 }
 
 enum DojoType {
-    static let title = Font.system(size: 24, weight: .medium)
-    static let section = Font.system(size: 17, weight: .medium)
-    static let body = Font.system(size: 15, weight: .regular)
-    static let caption = Font.system(size: 12, weight: .regular)
+    // Prefer dynamic text styles for better fit across device sizes.
+    static let title = Font.title3.weight(.medium)
+    static let section = Font.subheadline.weight(.medium)
+    static let body = Font.subheadline
+    static let caption = Font.caption
 }
 
 enum DojoSpace {
@@ -41,7 +42,9 @@ struct DojoScreen<Content: View>: View {
             content
                 .foregroundStyle(DojoTheme.textPrimary)
                 .padding(.horizontal, 22)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 

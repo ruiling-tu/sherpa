@@ -20,6 +20,9 @@ struct SettingsScreen: View {
                 .padding(.vertical, DojoSpace.lg)
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DojoTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }
