@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 /path/to/source-image.png"
+  echo "Usage: $0 /path/to/source-image.png [crop_ratio]"
   exit 1
 fi
 
@@ -13,9 +13,21 @@ trap 'rm -rf "$TMP"' EXIT
 
 mkdir -p "$OUT_DIR"
 
-# Center-crop to square and normalize to 1024x1024.
-sips -c 1024 1024 "$SRC" --out "$TMP/icon-1024.png" >/dev/null
-sips -z 1024 1024 "$TMP/icon-1024.png" --out "$TMP/icon-1024.png" >/dev/null
+# First normalize to 1024x1024 square.
+sips -c 1024 1024 "$SRC" --out "$TMP/base-1024.png" >/dev/null
+sips -z 1024 1024 "$TMP/base-1024.png" --out "$TMP/base-1024.png" >/dev/null
+
+# Then center-crop inner area to remove outer glow/vignette.
+# Default 0.74 keeps the logo tile and trims dark edge for iOS icons.
+CROP_RATIO="${2:-0.74}"
+CROP_PX=$(python3 - <<PY
+ratio = float("$CROP_RATIO")
+ratio = max(0.5, min(1.0, ratio))
+print(int(round(1024 * ratio)))
+PY
+)
+sips -c "$CROP_PX" "$CROP_PX" "$TMP/base-1024.png" --out "$TMP/icon-cropped.png" >/dev/null
+sips -z 1024 1024 "$TMP/icon-cropped.png" --out "$TMP/icon-1024.png" >/dev/null
 
 sizes=(
   "20 2 iphone 20@2x"
