@@ -1,0 +1,424 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BB0000000000000000000201 /* BoulderLogApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000101 /* BoulderLogApp.swift */; };
+		BB0000000000000000000202 /* AnalyticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000102 /* AnalyticsModels.swift */; };
+		BB0000000000000000000203 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000103 /* Enums.swift */; };
+		BB0000000000000000000204 /* ProjectModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000104 /* ProjectModels.swift */; };
+		BB0000000000000000000205 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000105 /* AnalyticsService.swift */; };
+		BB0000000000000000000206 /* HoldDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000106 /* HoldDetectionService.swift */; };
+		BB0000000000000000000207 /* ProjectRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000107 /* ProjectRepository.swift */; };
+		BB0000000000000000000208 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000108 /* ProjectStore.swift */; };
+		BB0000000000000000000209 /* ImageGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000109 /* ImageGeometry.swift */; };
+		BB000000000000000000020A /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000010A /* ImagePicker.swift */; };
+		BB000000000000000000020B /* ProjectEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000010B /* ProjectEditorViewModel.swift */; };
+		BB000000000000000000020C /* HoldAnnotationCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000010C /* HoldAnnotationCanvas.swift */; };
+		BB000000000000000000020D /* HoldDetailEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000010D /* HoldDetailEditor.swift */; };
+		BB000000000000000000020E /* ProblemCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000010E /* ProblemCardView.swift */; };
+		BB000000000000000000020F /* TagChipSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000010F /* TagChipSelector.swift */; };
+		BB0000000000000000000210 /* AnalyticsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000110 /* AnalyticsScreen.swift */; };
+		BB0000000000000000000211 /* LibraryTabScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000111 /* LibraryTabScreen.swift */; };
+		BB0000000000000000000212 /* ProjectDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000112 /* ProjectDetailScreen.swift */; };
+		BB0000000000000000000213 /* ProjectEditorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000113 /* ProjectEditorScreen.swift */; };
+		BB0000000000000000000214 /* ProjectListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000114 /* ProjectListScreen.swift */; };
+		BB0000000000000000000215 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000115 /* RootTabView.swift */; };
+		BB0000000000000000000216 /* SessionDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000116 /* SessionDetailScreen.swift */; };
+		BB0000000000000000000217 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000117 /* SettingsScreen.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BB0000000000000000000005 /* BoulderLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BoulderLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0000000000000000000101 /* BoulderLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoulderLogApp.swift; sourceTree = "<group>"; };
+		BB0000000000000000000102 /* AnalyticsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsModels.swift; sourceTree = "<group>"; };
+		BB0000000000000000000103 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		BB0000000000000000000104 /* ProjectModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectModels.swift; sourceTree = "<group>"; };
+		BB0000000000000000000105 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
+		BB0000000000000000000106 /* HoldDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldDetectionService.swift; sourceTree = "<group>"; };
+		BB0000000000000000000107 /* ProjectRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRepository.swift; sourceTree = "<group>"; };
+		BB0000000000000000000108 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
+		BB0000000000000000000109 /* ImageGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageGeometry.swift; sourceTree = "<group>"; };
+		BB000000000000000000010A /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		BB000000000000000000010B /* ProjectEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectEditorViewModel.swift; sourceTree = "<group>"; };
+		BB000000000000000000010C /* HoldAnnotationCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldAnnotationCanvas.swift; sourceTree = "<group>"; };
+		BB000000000000000000010D /* HoldDetailEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldDetailEditor.swift; sourceTree = "<group>"; };
+		BB000000000000000000010E /* ProblemCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProblemCardView.swift; sourceTree = "<group>"; };
+		BB000000000000000000010F /* TagChipSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagChipSelector.swift; sourceTree = "<group>"; };
+		BB0000000000000000000110 /* AnalyticsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000111 /* LibraryTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryTabScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000112 /* ProjectDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000113 /* ProjectEditorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectEditorScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000114 /* ProjectListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectListScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000115 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		BB0000000000000000000116 /* SessionDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000117 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
+		BB0000000000000000000118 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BB0000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BB0000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000020 /* BoulderLog */,
+				BB0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000005 /* BoulderLog.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000020 /* BoulderLog */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000021 /* App */,
+				BB0000000000000000000022 /* Models */,
+				BB0000000000000000000023 /* Services */,
+				BB0000000000000000000024 /* Store */,
+				BB0000000000000000000025 /* Utilities */,
+				BB0000000000000000000026 /* ViewModels */,
+				BB0000000000000000000027 /* Views */,
+				BB000000000000000000002A /* Resources */,
+			);
+			path = BoulderLog;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000021 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000101 /* BoulderLogApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000022 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000102 /* AnalyticsModels.swift */,
+				BB0000000000000000000103 /* Enums.swift */,
+				BB0000000000000000000104 /* ProjectModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000023 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000105 /* AnalyticsService.swift */,
+				BB0000000000000000000106 /* HoldDetectionService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000024 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000107 /* ProjectRepository.swift */,
+				BB0000000000000000000108 /* ProjectStore.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000025 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000109 /* ImageGeometry.swift */,
+				BB000000000000000000010A /* ImagePicker.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000026 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				BB000000000000000000010B /* ProjectEditorViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000027 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000028 /* Components */,
+				BB0000000000000000000029 /* Screens */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000028 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB000000000000000000010C /* HoldAnnotationCanvas.swift */,
+				BB000000000000000000010D /* HoldDetailEditor.swift */,
+				BB000000000000000000010E /* ProblemCardView.swift */,
+				BB000000000000000000010F /* TagChipSelector.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000029 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000110 /* AnalyticsScreen.swift */,
+				BB0000000000000000000111 /* LibraryTabScreen.swift */,
+				BB0000000000000000000112 /* ProjectDetailScreen.swift */,
+				BB0000000000000000000113 /* ProjectEditorScreen.swift */,
+				BB0000000000000000000114 /* ProjectListScreen.swift */,
+				BB0000000000000000000115 /* RootTabView.swift */,
+				BB0000000000000000000116 /* SessionDetailScreen.swift */,
+				BB0000000000000000000117 /* SettingsScreen.swift */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		BB000000000000000000002A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000118 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB0000000000000000000004 /* BoulderLog */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB000000000000000000000A /* Build configuration list for PBXNativeTarget "BoulderLog" */;
+			buildPhases = (
+				BB0000000000000000000006 /* Sources */,
+				BB0000000000000000000007 /* Frameworks */,
+				BB0000000000000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BoulderLog;
+			productName = BoulderLog;
+			productReference = BB0000000000000000000005 /* BoulderLog.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					BB0000000000000000000004 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = BB0000000000000000000009 /* Build configuration list for PBXProject "BoulderLog" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BB0000000000000000000002;
+			productRefGroup = BB0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BB0000000000000000000004 /* BoulderLog */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BB0000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB0000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000201 /* BoulderLogApp.swift in Sources */,
+				BB0000000000000000000202 /* AnalyticsModels.swift in Sources */,
+				BB0000000000000000000203 /* Enums.swift in Sources */,
+				BB0000000000000000000204 /* ProjectModels.swift in Sources */,
+				BB0000000000000000000205 /* AnalyticsService.swift in Sources */,
+				BB0000000000000000000206 /* HoldDetectionService.swift in Sources */,
+				BB0000000000000000000207 /* ProjectRepository.swift in Sources */,
+				BB0000000000000000000208 /* ProjectStore.swift in Sources */,
+				BB0000000000000000000209 /* ImageGeometry.swift in Sources */,
+				BB000000000000000000020A /* ImagePicker.swift in Sources */,
+				BB000000000000000000020B /* ProjectEditorViewModel.swift in Sources */,
+				BB000000000000000000020C /* HoldAnnotationCanvas.swift in Sources */,
+				BB000000000000000000020D /* HoldDetailEditor.swift in Sources */,
+				BB000000000000000000020E /* ProblemCardView.swift in Sources */,
+				BB000000000000000000020F /* TagChipSelector.swift in Sources */,
+				BB0000000000000000000210 /* AnalyticsScreen.swift in Sources */,
+				BB0000000000000000000211 /* LibraryTabScreen.swift in Sources */,
+				BB0000000000000000000212 /* ProjectDetailScreen.swift in Sources */,
+				BB0000000000000000000213 /* ProjectEditorScreen.swift in Sources */,
+				BB0000000000000000000214 /* ProjectListScreen.swift in Sources */,
+				BB0000000000000000000215 /* RootTabView.swift in Sources */,
+				BB0000000000000000000216 /* SessionDetailScreen.swift in Sources */,
+				BB0000000000000000000217 /* SettingsScreen.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BB000000000000000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BB000000000000000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		BB000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BoulderLog/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ruilingtu.sherpa;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BoulderLog/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ruilingtu.sherpa;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BB0000000000000000000009 /* Build configuration list for PBXProject "BoulderLog" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000000000000000000000B /* Debug */,
+				BB000000000000000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB000000000000000000000A /* Build configuration list for PBXNativeTarget "BoulderLog" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000000000000000000000D /* Debug */,
+				BB000000000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BB0000000000000000000001 /* Project object */;
+}
