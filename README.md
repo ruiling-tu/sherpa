@@ -1,24 +1,60 @@
 # BoulderLog iOS App
 
-BoulderLog is an iOS app for logging bouldering sessions and projects with a manual-first hold marking workflow.
+BoulderLog is an iOS app for logging bouldering sessions and projects, with optional AI-generated 2D problem cards from wall photos.
 
-## What is implemented
+## Current app structure
 
-- Tabs: `Log`, `Library`, `Insights`, `Settings`
-- Session list and session detail with project entries
-- 5-step New Project wizard: photo, crop, holds, metadata, save
-- Project detail with photo overlay, 2D problem card, hold-note editing
-- Library filters + search
-- Insights charts + rules-based suggestions
-- SwiftData persistence + local compressed image storage
-- Frosted Dojo visual design system
+- Tabs: `Sessions`, `Library`, `Insights`, `Settings`
+- Navigation hierarchy: `Sessions -> Projects -> Project`
+- New Project wizard: 6 steps
+1. `Photo`
+2. `Crop`
+3. `Holds`
+4. `Preview`
+5. `Metadata`
+6. `Save`
+
+## Core features
+
+- Session and project tracking with SwiftData persistence
+- Manual hold annotation on the cropped wall photo (for logging and visualization)
+- Route information controls in Step 3:
+1. Grade selection (`V0` to `V10`)
+2. Route color selection (`yellow`, `green`, `red`, `blue`, `black`, `white`, `purple`, `orange`, `pink`, `brown`, `gray`, `teal`)
+- AI 2D problem card generation in Step 4
+- Side-by-side route visuals in review and project detail:
+1. Original image (+ optional markers overlay)
+2. Generated 2D problem card
+- Grade-reactive 2D card frame styling across the full grade range
+
+## AI 2D card pipeline
+
+- Input sent to model:
+1. Clean source image (no local annotation overlay data)
+2. Selected route color
+3. Selected grade context
+- Prompt constraints prioritize:
+1. Spatial fidelity (highest priority)
+2. Hold shape and size fidelity
+3. Strict color filtering to selected route color only
+- Upload preparation is tuned for quality under a 35s timeout:
+1. Fidelity profile: up to 1408px long side, JPEG quality target 0.9, byte cap 2.8MB
+2. Fallback profile for resilience if needed
+- Generated cards are cached locally and keyed by prompt signature + model.
+
+## Settings
+
+`Settings -> AI Problem Cards` lets you:
+
+- Enable or disable AI generation
+- Configure OpenAI API key (or use bundled/default env configuration)
+- Choose model preset (`Fast` or `Balanced`)
+- Clear generated card cache
 
 ## Design system
 
-Reusable Dojo components are in:
-- `BoulderLog/Utilities/DojoTheme.swift`
+Reusable UI primitives are in `BoulderLog/Utilities/DojoTheme.swift`:
 
-Includes:
 - `DojoScreen`
 - `DojoSurface`
 - `DojoButtonPrimary`
@@ -28,22 +64,20 @@ Includes:
 - `DojoEmptyState`
 - `DojoHoldMarker`
 
-## Open and run
+## Run locally
 
 1. Open `BoulderLog.xcodeproj` in Xcode.
-2. Choose scheme `BoulderLog`.
-3. Set your signing team in target settings.
-4. Build and run (iOS 17+).
+2. Select scheme `BoulderLog`.
+3. Set signing team in target settings.
+4. Build and run on iOS (17+ recommended).
 
-## App logo / AppIcon
+## App icon helper
 
-The project includes `Assets.xcassets` and an `AppIcon.appiconset` template.
-
-To generate all required icon sizes from your logo source image:
+Generate all app icon sizes from one source image:
 
 ```bash
 cd "/Users/ruilingtu/Codex Projects /Sherpa"
 ./scripts/generate_appicon.sh /absolute/path/to/your-logo-image.png
 ```
 
-Then in Xcode target build settings, set `App Icons Source` to `AppIcon` if not already set.
+Then ensure target `App Icons Source` is set to `AppIcon`.
