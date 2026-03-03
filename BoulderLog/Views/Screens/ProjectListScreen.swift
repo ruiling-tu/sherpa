@@ -6,65 +6,74 @@ struct LogTabScreen: View {
     @Query(sort: \SessionEntity.date, order: .reverse) private var sessions: [SessionEntity]
 
     @State private var showCreateSession = false
-    @State private var showDeleteSessionPicker = false
+    @State private var sessionToDelete: SessionEntity?
 
     var body: some View {
         NavigationStack {
             DojoScreen {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: DojoSpace.md) {
-                        DojoButtonPrimary(title: "New Session", icon: "plus") {
-                            showCreateSession = true
-                        }
+                List {
+                    DojoButtonPrimary(title: "New Session", icon: "plus") {
+                        showCreateSession = true
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: DojoSpace.md, leading: 0, bottom: DojoSpace.sm, trailing: 0))
 
-                        if sessions.isEmpty {
-                            DojoEmptyState(
-                                title: "No sessions yet",
-                                subtitle: "Create a session to start logging your projects.",
-                                icon: "calendar"
-                            )
-                        } else {
-                            ForEach(sessions) { session in
-                                NavigationLink {
-                                    SessionDetailScreen(session: session)
+                    if sessions.isEmpty {
+                        DojoEmptyState(
+                            title: "No sessions yet",
+                            subtitle: "Create a session to start logging your projects.",
+                            icon: "calendar"
+                        )
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: DojoSpace.sm, leading: 0, bottom: DojoSpace.md, trailing: 0))
+                    } else {
+                        ForEach(sessions) { session in
+                            NavigationLink {
+                                SessionDetailScreen(session: session)
+                            } label: {
+                                SessionCard(session: session)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    sessionToDelete = session
                                 } label: {
-                                    SessionCard(session: session)
-                                }
-                                .buttonStyle(.plain)
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        let repo = ProjectRepository(context: context)
-                                        try? repo.deleteSession(session)
-                                    } label: {
-                                        Label("Delete Session", systemImage: "trash")
-                                    }
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: DojoSpace.sm, leading: 0, bottom: DojoSpace.sm, trailing: 0))
                         }
                     }
-                    .padding(.vertical, DojoSpace.md)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Log")
+            .navigationTitle("Sessions")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(role: .destructive) {
-                        showDeleteSessionPicker = true
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundStyle(DojoTheme.textSecondary)
-                    }
-                    .disabled(sessions.isEmpty)
-                }
-            }
             .toolbarBackground(DojoTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $showCreateSession) {
                 CreateSessionSheet()
             }
-            .sheet(isPresented: $showDeleteSessionPicker) {
-                DeleteSessionSheet()
+            .alert("Delete this session?", isPresented: Binding(
+                get: { sessionToDelete != nil },
+                set: { if !$0 { sessionToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    guard let sessionToDelete else { return }
+                    let repo = ProjectRepository(context: context)
+                    try? repo.deleteSession(sessionToDelete)
+                    self.sessionToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    sessionToDelete = nil
+                }
+            } message: {
+                Text("This removes all projects, holds, and stored images in this session.")
             }
         }
     }
@@ -135,67 +144,6 @@ private struct CreateSessionSheet: View {
                 .padding(.top, DojoSpace.lg)
             }
             .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
-
-private struct DeleteSessionSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var context
-    @Query(sort: \SessionEntity.date, order: .reverse) private var sessions: [SessionEntity]
-
-    @State private var sessionToDelete: SessionEntity?
-
-    var body: some View {
-        NavigationStack {
-            List {
-                if sessions.isEmpty {
-                    Text("No sessions to delete")
-                        .font(DojoType.body)
-                        .foregroundStyle(DojoTheme.textSecondary)
-                } else {
-                    ForEach(sessions) { session in
-                        Button(role: .destructive) {
-                            sessionToDelete = session
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(session.title)
-                                    .font(DojoType.body)
-                                Text(session.date.formatted(.dateTime.month(.wide).day().year()))
-                                    .font(DojoType.caption)
-                                    .foregroundStyle(DojoTheme.textSecondary)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Delete Session")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .alert("Delete this session?", isPresented: Binding(
-                get: { sessionToDelete != nil },
-                set: { if !$0 { sessionToDelete = nil } }
-            )) {
-                Button("Delete", role: .destructive) {
-                    if let sessionToDelete {
-                        let repo = ProjectRepository(context: context)
-                        try? repo.deleteSession(sessionToDelete)
-                    }
-                    self.sessionToDelete = nil
-                    if sessions.count <= 1 {
-                        dismiss()
-                    }
-                }
-                Button("Cancel", role: .cancel) {
-                    sessionToDelete = nil
-                }
-            } message: {
-                Text("This removes all projects, holds, and stored images in the selected session.")
-            }
         }
     }
 }

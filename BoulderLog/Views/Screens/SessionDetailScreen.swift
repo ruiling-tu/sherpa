@@ -9,62 +9,59 @@ struct SessionDetailScreen: View {
 
     var body: some View {
         DojoScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DojoSpace.lg) {
-                    DojoSectionHeader(
-                        title: session.title,
-                        subtitle: session.date.formatted(.dateTime.weekday(.wide).month().day().year())
+            List {
+                DojoSectionHeader(
+                    title: session.title,
+                    subtitle: session.date.formatted(.dateTime.weekday(.wide).month().day().year())
+                )
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: DojoSpace.md, leading: 0, bottom: DojoSpace.sm, trailing: 0))
+
+                if session.entries.isEmpty {
+                    DojoEmptyState(
+                        title: "No project entries",
+                        subtitle: "Tap Add Project to create your first one in this session.",
+                        icon: "square.stack"
                     )
-
-                    if session.entries.isEmpty {
-                        DojoEmptyState(
-                            title: "No project entries",
-                            subtitle: "Tap Add Project to create your first one in this session.",
-                            icon: "square.stack"
-                        )
-                    } else {
-                        ForEach(sortedEntries) { entry in
-                            NavigationLink {
-                                ProjectDetailScreen(entry: entry)
-                            } label: {
-                                SessionEntryCard(entry: entry)
-                            }
-                            .buttonStyle(.plain)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: DojoSpace.sm, leading: 0, bottom: DojoSpace.sm, trailing: 0))
+                } else {
+                    ForEach(sortedEntries) { entry in
+                        NavigationLink {
+                            ProjectDetailScreen(entry: entry)
+                        } label: {
+                            SessionEntryCard(entry: entry)
                         }
-                    }
-
-                    DojoButtonPrimary(title: "Add Project", icon: "plus") {
-                        showWizard = true
-                    }
-                }
-                .padding(.vertical, DojoSpace.md)
-            }
-        }
-        .navigationTitle("Session")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(DojoTheme.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    if sortedEntries.isEmpty {
-                        Button("No Projects to Delete") {}
-                            .disabled(true)
-                    } else {
-                        ForEach(sortedEntries) { entry in
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 entryToDelete = entry
                             } label: {
-                                Label("Delete \(entry.name.isEmpty ? "Untitled Project" : entry.name)", systemImage: "trash")
+                                Label("Delete", systemImage: "trash")
                             }
                         }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: DojoSpace.sm, leading: 0, bottom: DojoSpace.sm, trailing: 0))
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(DojoTheme.textSecondary)
                 }
+
+                DojoButtonPrimary(title: "Add Project", icon: "plus") {
+                    showWizard = true
+                }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: DojoSpace.md, leading: 0, bottom: DojoSpace.md, trailing: 0))
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
+        .navigationTitle("Projects")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DojoTheme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .sheet(isPresented: $showWizard) {
             NewProjectWizardScreen(session: session)
         }
@@ -91,7 +88,6 @@ struct SessionDetailScreen: View {
 }
 
 private struct SessionEntryCard: View {
-    @Environment(\.modelContext) private var context
     let entry: ProjectEntryEntity
 
     var body: some View {
@@ -114,17 +110,6 @@ private struct SessionEntryCard: View {
                 }
 
                 Spacer()
-
-                Menu {
-                    Button(role: .destructive) {
-                        try? ProjectRepository(context: context).deleteEntry(entry)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(DojoTheme.textSecondary)
-                }
             }
         }
     }

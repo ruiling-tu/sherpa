@@ -159,28 +159,8 @@ struct NewProjectWizardScreen: View {
                             .tint(DojoTheme.accentPrimary)
 
                             HStack(spacing: DojoSpace.sm) {
-                                Menu {
-                                    ForEach(GradeScale.presets, id: \.self) { grade in
-                                        Button(vm.draft.grade == grade ? "\(grade) ✓" : grade) {
-                                            vm.draft.grade = grade
-                                        }
-                                    }
-                                } label: {
-                                    Text("Grade \(vm.draft.grade)")
-                                        .font(DojoType.caption)
-                                        .padding(.horizontal, DojoSpace.sm)
-                                        .padding(.vertical, 7)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(Color.white.opacity(0.75))
-                                                .overlay(Capsule(style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
-                                        )
-                                }
-                                .buttonStyle(.plain)
-
-                                Spacer(minLength: DojoSpace.sm)
-
                                 if vm.annotateMode {
+                                    Spacer(minLength: DojoSpace.sm)
                                     Button("Clear All") {
                                         vm.clearHolds()
                                     }
@@ -196,7 +176,7 @@ struct NewProjectWizardScreen: View {
                         }
                     }
 
-                    routeColorSelectionSection
+                    routeInformationSection
 
                     ScrollView {
                         VStack(spacing: DojoSpace.md) {
@@ -353,49 +333,96 @@ struct NewProjectWizardScreen: View {
         dismiss()
     }
 
-    private var routeColorSelectionSection: some View {
-        VStack(alignment: .leading, spacing: DojoSpace.xs) {
-            Text("Choose Route Color")
-                .font(DojoType.caption)
-                .foregroundStyle(DojoTheme.textSecondary)
-
-            HStack(spacing: DojoSpace.sm) {
-                Menu {
-                    ForEach(RouteColor.allCases) { color in
-                        Button(vm.draft.routeColor == color ? "\(color.title) ✓" : color.title) {
-                            vm.draft.routeColor = color
-                        }
-                    }
-                } label: {
-                    Text(vm.draft.routeColor.title)
+    private var routeInformationSection: some View {
+        DojoSurface(cornerRadius: 14) {
+            VStack(alignment: .leading, spacing: DojoSpace.sm) {
+                HStack(spacing: DojoSpace.sm) {
+                    Text("Route Information")
+                        .font(DojoType.body)
+                    Text("Required")
                         .font(DojoType.caption)
-                        .padding(.horizontal, DojoSpace.sm)
-                        .padding(.vertical, 7)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.75))
-                                .overlay(Capsule(style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+                                .fill(DojoTheme.accentPrimary.opacity(0.14))
                         )
+                        .foregroundStyle(DojoTheme.accentPrimary)
+                    Spacer()
                 }
-                .buttonStyle(.plain)
 
-                Spacer()
+                Text("Choose both grade and route color for 2D extraction.")
+                    .font(DojoType.caption)
+                    .foregroundStyle(DojoTheme.textSecondary)
 
-                Text("Used for 2D extraction")
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: DojoSpace.sm), GridItem(.flexible(), spacing: DojoSpace.sm)],
+                    spacing: DojoSpace.sm
+                ) {
+                    routeSelectorCard(
+                        title: "Grade",
+                        value: vm.draft.grade
+                    ) {
+                        ForEach(GradeScale.presets, id: \.self) { grade in
+                            Button(vm.draft.grade == grade ? "\(grade) ✓" : grade) {
+                                vm.draft.grade = grade
+                            }
+                        }
+                    }
+
+                    routeSelectorCard(
+                        title: "Route Color",
+                        value: vm.draft.routeColor.title
+                    ) {
+                        ForEach(RouteColor.allCases) { color in
+                            Button(vm.draft.routeColor == color ? "\(color.title) ✓" : color.title) {
+                                vm.draft.routeColor = color
+                            }
+                        }
+                    }
+                }
+
+                Text("Tap either field to select.")
                     .font(DojoType.caption)
                     .foregroundStyle(DojoTheme.textSecondary)
             }
         }
-        .padding(DojoSpace.sm)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.64))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(DojoTheme.divider, lineWidth: 0.8)
-                )
-        )
+    }
+
+    private func routeSelectorCard<Items: View>(
+        title: String,
+        value: String,
+        @ViewBuilder items: () -> Items
+    ) -> some View {
+        Menu {
+            items()
+        } label: {
+            VStack(alignment: .leading, spacing: DojoSpace.xs) {
+                Text(title)
+                    .font(DojoType.caption)
+                    .foregroundStyle(DojoTheme.textSecondary)
+                HStack(spacing: DojoSpace.xs) {
+                    Text(value)
+                        .font(DojoType.body)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(DojoTheme.textSecondary)
+                }
+            }
+            .padding(DojoSpace.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.72))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(DojoTheme.divider, lineWidth: 0.8)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

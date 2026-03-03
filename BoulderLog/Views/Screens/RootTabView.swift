@@ -12,7 +12,7 @@ struct RootTabView: View {
     var body: some View {
         TabView {
             LogTabScreen()
-                .tabItem { Label("Log", systemImage: "book") }
+                .tabItem { Label("Sessions", systemImage: "book") }
 
             LibraryTabScreen()
                 .tabItem { Label("Library", systemImage: "square.stack") }
