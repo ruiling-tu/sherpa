@@ -8,6 +8,7 @@ struct ProjectDetailScreen: View {
     @State private var showOverlay = true
     @State private var selectedHold: HoldEntity?
     @State private var cardRefreshToken = 0
+    private let cardAspectRatio: CGFloat = 2.0 / 3.0
 
     var body: some View {
         DojoScreen {
@@ -15,52 +16,78 @@ struct ProjectDetailScreen: View {
                 VStack(alignment: .leading, spacing: DojoSpace.lg) {
                     DojoSectionHeader(title: entry.name.isEmpty ? "Project Detail" : entry.name)
 
+                    if let image = sourceImage {
+                        DojoSurface {
+                            VStack(alignment: .leading, spacing: DojoSpace.md) {
+                                HStack(alignment: .center, spacing: DojoSpace.sm) {
+                                    DojoSectionHeader(title: "Route Visuals", subtitle: "Original and 2D card")
+                                    Spacer()
+                                    Button("Regenerate") {
+                                        cardRefreshToken += 1
+                                    }
+                                    .font(DojoType.caption)
+                                    .foregroundStyle(DojoTheme.accentPrimary)
+                                }
+
+                                LazyVGrid(
+                                    columns: [
+                                        GridItem(.flexible(), spacing: DojoSpace.md),
+                                        GridItem(.flexible(), spacing: DojoSpace.md)
+                                    ],
+                                    spacing: DojoSpace.md
+                                ) {
+                                    projectMediaCard(title: showOverlay ? "Original + Markers" : "Original") {
+                                        OverlayImageView(image: image, holds: entry.holds, showOverlay: showOverlay, fillsBounds: true)
+                                    }
+
+                                    projectMediaCard(title: "2D Problem Card") {
+                                        ProblemCard2DView(
+                                            entryID: entry.id,
+                                            holds: sortedHolds,
+                                            sourceImage: image,
+                                            grade: entry.grade,
+                                            routeColor: entry.routeColor,
+                                            refreshTrigger: cardRefreshToken
+                                        ) { hold in
+                                            selectedHold = hold
+                                        }
+                                    }
+                                }
+
+                                Toggle("Show hold overlay on original", isOn: $showOverlay)
+                                    .tint(DojoTheme.accentPrimary)
+                                    .font(DojoType.body)
+                            }
+                        }
+                    }
+
                     DojoSurface {
                         VStack(alignment: .leading, spacing: DojoSpace.md) {
-                            if let image = ImageStore.load(path: entry.imagePath) {
-                                OverlayImageView(image: image, holds: entry.holds, showOverlay: showOverlay)
-                                    .frame(height: 300)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            DojoSectionHeader(title: "Route Metadata")
+
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: DojoSpace.sm), GridItem(.flexible(), spacing: DojoSpace.sm)],
+                                spacing: DojoSpace.sm
+                            ) {
+                                metricCard(title: "Grade", value: entry.grade)
+                                metricCard(title: "Route Color", value: entry.routeColor.title)
+                                metricCard(title: "Status", value: entry.status.title)
+                                metricCard(title: "Wall", value: entry.wallAngle.title)
+                                metricCard(title: "Attempts", value: "\(entry.attempts)")
                             }
 
-                            Toggle("Show hold overlay", isOn: $showOverlay)
-                                .tint(DojoTheme.accentPrimary)
-                                .font(DojoType.body)
-
-                            HStack {
-                                DojoSectionHeader(title: "2D Problem Card")
-                                Spacer()
-                                Button("Regenerate") {
-                                    cardRefreshToken += 1
-                                }
-                                .font(DojoType.caption)
-                                .foregroundStyle(DojoTheme.accentPrimary)
-                            }
-                            ProblemCard2DView(entryID: entry.id, holds: sortedHolds, sourceImage: ImageStore.load(path: entry.imagePath), grade: entry.grade, refreshTrigger: cardRefreshToken) { hold in
-                                selectedHold = hold
-                            }
-                            .frame(height: 240)
-                        }
-                    }
-
-                    DojoSurface {
-                        VStack(alignment: .leading, spacing: DojoSpace.sm) {
-                            Text("\(entry.grade) • \(entry.status.title) • \(entry.wallAngle.title)")
-                                .font(DojoType.body)
-                            Text("Attempts: \(entry.attempts)")
-                                .font(DojoType.body)
-                                .foregroundStyle(DojoTheme.textSecondary)
-                            if !entry.notes.isEmpty {
-                                Text(entry.notes)
-                                    .font(DojoType.body)
-                                    .foregroundStyle(DojoTheme.textSecondary)
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: DojoSpace.sm), GridItem(.flexible(), spacing: DojoSpace.sm)],
+                                spacing: DojoSpace.sm
+                            ) {
+                                tagCard(title: "Style", tags: entry.styleTags.map(\.title))
+                                tagCard(title: "Hold Type", tags: entry.holdTypeTags.map(\.title))
+                                tagCard(title: "Technique", tags: entry.techniqueTags.map(\.title))
+                                notesCard
+                                    .gridCellColumns(2)
                             }
                         }
                     }
-
-                    tagSection(title: "Style", tags: entry.styleTags.map(\.title))
-                    tagSection(title: "Hold Type", tags: entry.holdTypeTags.map(\.title))
-                    tagSection(title: "Technique", tags: entry.techniqueTags.map(\.title))
 
                     if let hold = selectedHold {
                         HoldEntityEditor(hold: hold) {
@@ -85,19 +112,92 @@ struct ProjectDetailScreen: View {
         entry.holds.sorted(by: { ($0.orderIndex ?? 999) < ($1.orderIndex ?? 999) })
     }
 
-    private func tagSection(title: String, tags: [String]) -> some View {
-        DojoSurface {
-            VStack(alignment: .leading, spacing: DojoSpace.sm) {
-                DojoSectionHeader(title: title)
-                if tags.isEmpty {
-                    Text("None")
-                        .font(DojoType.caption)
-                        .foregroundStyle(DojoTheme.textSecondary)
-                } else {
-                    FlowTags(tags: tags)
-                }
+    private var sourceImage: UIImage? {
+        ImageStore.load(path: entry.imagePath)
+    }
+
+    private func projectMediaCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: DojoSpace.xs) {
+            Text(title)
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+                .lineLimit(1)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.42))
+                content()
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(cardAspectRatio, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(DojoTheme.divider, lineWidth: 0.8)
+            )
+        }
+    }
+
+    private func metricCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: DojoSpace.xs) {
+            Text(title)
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+            Text(value)
+                .font(DojoType.body.weight(.medium))
+                .foregroundStyle(DojoTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+        }
+        .padding(DojoSpace.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.68))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+        )
+    }
+
+    private func tagCard(title: String, tags: [String]) -> some View {
+        VStack(alignment: .leading, spacing: DojoSpace.sm) {
+            Text(title)
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+            if tags.isEmpty {
+                Text("None")
+                    .font(DojoType.caption)
+                    .foregroundStyle(DojoTheme.textSecondary)
+            } else {
+                FlowTags(tags: tags)
             }
         }
+        .padding(DojoSpace.sm)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.68))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+        )
+    }
+
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: DojoSpace.xs) {
+            Text("Notes")
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+
+            Text(entry.notes.isEmpty ? "No notes yet." : entry.notes)
+                .font(DojoType.body)
+                .foregroundStyle(DojoTheme.textPrimary)
+                .lineLimit(entry.notes.isEmpty ? 1 : nil)
+        }
+        .padding(DojoSpace.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.68))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+        )
     }
 }
 
@@ -105,15 +205,18 @@ private struct OverlayImageView: View {
     let image: UIImage
     let holds: [HoldEntity]
     let showOverlay: Bool
+    var fillsBounds: Bool = false
 
     var body: some View {
         GeometryReader { geo in
-            let imageRect = ImageSpaceTransform.fittedRect(imageSize: image.size, in: geo.size)
+            let imageRect = fillsBounds
+                ? ImageSpaceTransform.filledRect(imageSize: image.size, in: geo.size)
+                : ImageSpaceTransform.fittedRect(imageSize: image.size, in: geo.size)
 
             ZStack {
                 Image(uiImage: image)
                     .resizable()
-                    .scaledToFit()
+                    .aspectRatio(contentMode: fillsBounds ? .fill : .fit)
                     .frame(width: geo.size.width, height: geo.size.height)
 
                 if showOverlay {

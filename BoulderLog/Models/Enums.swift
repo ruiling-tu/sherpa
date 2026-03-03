@@ -75,3 +75,31 @@ enum TechniqueTag: String, Codable, CaseIterable, Identifiable {
 enum GradeScale {
     static let presets = (0...10).map { "V\($0)" }
 }
+
+enum RouteColor: String, Codable, CaseIterable, Identifiable {
+    case yellow
+    case green
+    case red
+    case blue
+    case black
+    case white
+    case purple
+    case orange
+    case pink
+    case brown
+    case gray
+    case teal
+
+    var id: String { rawValue }
+
+    var title: String {
+        rawValue.capitalized
+    }
+
+    var promptLabel: String {
+        switch self {
+        case .gray: return "gray"
+        default: return rawValue
+        }
+    }
+}

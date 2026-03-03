@@ -34,6 +34,7 @@ struct ProjectRepository {
             createdAt: Date(),
             updatedAt: Date(),
             imagePath: imagePath,
+            routeColor: draft.routeColor,
             styleTags: draft.styleTags,
             holdTypeTags: draft.holdTypeTags,
             techniqueTags: draft.techniqueTags,
@@ -58,8 +59,11 @@ struct ProjectRepository {
         try context.save()
 
         // Reuse the generated preview card so Library can render immediately after save.
-        let holdSpecs = HoldRenderSpec.fromDrafts(draft.holds)
-        let signature = ProblemCardPromptFactory.cacheSignature(grade: draft.grade, holds: holdSpecs, model: AICardSettings.model)
+        let signature = ProblemCardPromptFactory.cacheSignature(
+            grade: draft.grade,
+            routeColor: draft.routeColor,
+            model: AICardSettings.model
+        )
         ProblemCardImageStore.cloneCachedCard(
             from: ProblemCardImageStore.previewDraftEntryID,
             to: entry.id,
@@ -173,6 +177,7 @@ struct HoldDraft: Identifiable {
 struct EntryDraft {
     var name: String = ""
     var grade: String = "V2"
+    var routeColor: RouteColor = .yellow
     var status: EntryStatus = .attempted
     var attempts: Int = 1
     var wallAngle: WallAngle = .vert

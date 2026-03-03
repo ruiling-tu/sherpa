@@ -35,6 +35,7 @@ final class ProjectEntryEntity {
     var createdAt: Date
     var updatedAt: Date
     var imagePath: String
+    var routeColorRaw: String = RouteColor.yellow.rawValue
     var styleTagsRaw: String
     var holdTypeTagsRaw: String
     var techniqueTagsRaw: String
@@ -56,6 +57,7 @@ final class ProjectEntryEntity {
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         imagePath: String,
+        routeColor: RouteColor = .yellow,
         styleTags: [StyleTag] = [],
         holdTypeTags: [HoldTypeTag] = [],
         techniqueTags: [TechniqueTag] = [],
@@ -73,6 +75,7 @@ final class ProjectEntryEntity {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.imagePath = imagePath
+        self.routeColorRaw = routeColor.rawValue
         self.styleTagsRaw = Self.encodeTags(styleTags)
         self.holdTypeTagsRaw = Self.encodeTags(holdTypeTags)
         self.techniqueTagsRaw = Self.encodeTags(techniqueTags)
@@ -88,6 +91,11 @@ final class ProjectEntryEntity {
     var wallAngle: WallAngle {
         get { WallAngle(rawValue: wallAngleRaw) ?? .vert }
         set { wallAngleRaw = newValue.rawValue }
+    }
+
+    var routeColor: RouteColor {
+        get { RouteColor(rawValue: routeColorRaw) ?? .yellow }
+        set { routeColorRaw = newValue.rawValue }
     }
 
     var styleTags: [StyleTag] {

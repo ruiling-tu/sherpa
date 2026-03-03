@@ -9,6 +9,14 @@ struct ImageSpaceTransform {
         return CGRect(x: (bounds.width - width) / 2, y: (bounds.height - height) / 2, width: width, height: height)
     }
 
+    static func filledRect(imageSize: CGSize, in bounds: CGSize) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return .zero }
+        let scale = max(bounds.width / imageSize.width, bounds.height / imageSize.height)
+        let width = imageSize.width * scale
+        let height = imageSize.height * scale
+        return CGRect(x: (bounds.width - width) / 2, y: (bounds.height - height) / 2, width: width, height: height)
+    }
+
     static func normalizedPoint(from viewPoint: CGPoint, imageRect: CGRect) -> CGPoint? {
         guard imageRect.contains(viewPoint), imageRect.width > 0, imageRect.height > 0 else { return nil }
         let x = (viewPoint.x - imageRect.minX) / imageRect.width

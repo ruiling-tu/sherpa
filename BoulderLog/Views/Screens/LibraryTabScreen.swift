@@ -235,6 +235,7 @@ private struct LibraryCard: View {
                     holds: entry.holds,
                     sourceImage: ImageStore.load(path: entry.imagePath),
                     grade: entry.grade,
+                    routeColor: entry.routeColor,
                     onTapHold: { _ in }
                 )
                 .frame(maxWidth: .infinity)

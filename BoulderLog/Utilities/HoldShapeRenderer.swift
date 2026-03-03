@@ -248,14 +248,44 @@ enum HoldShapeRenderer {
         }
     }
 
+    private static let framePalette: [Color] = [
+        Color(hex: "9D7A4E"), // V0
+        Color(hex: "B08D57"), // V1
+        Color(hex: "A9A9AA"), // V2
+        Color(hex: "C9A227"), // V3
+        Color(hex: "C88A3A"), // V4
+        Color(hex: "A975B5"), // V5
+        Color(hex: "7E9BC7"), // V6
+        Color(hex: "4EA08A"), // V7
+        Color(hex: "6E93A1"), // V8
+        Color(hex: "516A86"), // V9
+        Color(hex: "39455A")  // V10
+    ]
+
+    private static let frameHighlightPalette: [Color] = [
+        Color(hex: "D8BE9A"), // V0
+        Color(hex: "E4CDA4"), // V1
+        Color(hex: "E3E2E2"), // V2
+        Color(hex: "E7D078"), // V3
+        Color(hex: "E7B077"), // V4
+        Color(hex: "D2A0DA"), // V5
+        Color(hex: "A9C5E4"), // V6
+        Color(hex: "95CFBF"), // V7
+        Color(hex: "A8C6D0"), // V8
+        Color(hex: "92AAC7"), // V9
+        Color(hex: "73859D")  // V10
+    ]
+
     static func frameColor(for grade: String) -> Color {
-        let value = gradeValue(grade)
-        switch value {
-        case ...1: return Color(hex: "B08D57") // bronze
-        case 2: return Color(hex: "A9A9AA") // silver
-        case 3: return Color(hex: "C9A227") // gold
-        default: return Color(hex: "8FB8C9") // diamond
-        }
+        framePalette[clampedGradeValue(grade)]
+    }
+
+    static func frameHighlight(for grade: String) -> Color {
+        frameHighlightPalette[clampedGradeValue(grade)]
+    }
+
+    static func clampedGradeValue(_ grade: String) -> Int {
+        min(max(gradeValue(grade), 0), 10)
     }
 
     static func gradeValue(_ grade: String) -> Int {

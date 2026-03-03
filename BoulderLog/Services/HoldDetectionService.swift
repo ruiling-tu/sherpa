@@ -1,5 +1,3 @@
-import CoreImage
-import CoreImage.CIFilterBuiltins
 import Foundation
 import UIKit
 import os.log
@@ -19,54 +17,6 @@ struct ManualHoldDetectionService: HoldDetectionService {
     func detectHolds(image: UIImage) async -> [HoldCandidate] { [] }
 }
 
-struct HoldRenderSpec: Codable, Hashable {
-    let id: UUID
-    let x: Double
-    let y: Double
-    let radius: Double
-    let role: HoldRole
-    let orderIndex: Int?
-    let isRoute: Bool
-}
-
-extension HoldRenderSpec {
-    static func fromEntities(_ holds: [HoldEntity]) -> [HoldRenderSpec] {
-        let routeIDs = routeIDSet(holds: holds.map { ($0.id, $0.role, $0.orderIndex) })
-        return holds.map {
-            HoldRenderSpec(
-                id: $0.id,
-                x: $0.xNormalized,
-                y: $0.yNormalized,
-                radius: $0.radius,
-                role: $0.role,
-                orderIndex: $0.orderIndex,
-                isRoute: routeIDs.contains($0.id)
-            )
-        }
-    }
-
-    static func fromDrafts(_ holds: [HoldDraft]) -> [HoldRenderSpec] {
-        let routeIDs = routeIDSet(holds: holds.map { ($0.id, $0.role, $0.orderIndex) })
-        return holds.map {
-            HoldRenderSpec(
-                id: $0.id,
-                x: $0.xNormalized,
-                y: $0.yNormalized,
-                radius: $0.radius,
-                role: $0.role,
-                orderIndex: $0.orderIndex,
-                isRoute: routeIDs.contains($0.id)
-            )
-        }
-    }
-
-    private static func routeIDSet(holds: [(UUID, HoldRole, Int?)]) -> Set<UUID> {
-        guard !holds.isEmpty else { return [] }
-        // In this flow, any stored hold is considered an explicit annotation.
-        return Set(holds.map { $0.0 })
-    }
-}
-
 enum AICardSettings {
     struct ModelPreset: Identifiable {
         let id: String
@@ -83,8 +33,14 @@ enum AICardSettings {
     static let fallbackModel = "gpt-image-1"
 
     static let requestTimeoutSeconds: TimeInterval = 35
-    static let maxUploadDimension: CGFloat = 896
-    static let uploadJPEGQuality: CGFloat = 0.68
+    static let maxUploadDimension: CGFloat = 1408
+    static let fallbackUploadDimension: CGFloat = 1152
+    static let uploadJPEGQuality: CGFloat = 0.9
+    static let fallbackUploadJPEGQuality: CGFloat = 0.82
+    static let maxUploadJPEGBytes: Int = 2_800_000
+    static let fallbackMaxUploadJPEGBytes: Int = 1_900_000
+    static let maxUploadPNGBytes: Int = 4_000_000
+    static let fallbackMaxUploadPNGBytes: Int = 2_500_000
     static let preferredOutputSize = "1024x1536"
     static let fallbackOutputSize = "1024x1024"
 
@@ -116,78 +72,54 @@ enum AICardSettings {
         modelPresets.first(where: { $0.id == model })?.title ?? model
     }
 
-    static func quality(for model: String) -> String {
-        model == defaultModel ? "low" : "medium"
-    }
+    static func quality(for _: String) -> String { "medium" }
 }
 
 enum ProblemCardPromptFactory {
-    static func prompt(grade: String, holds: [HoldRenderSpec]) -> String {
-        let compactJSON = holdsJSONString(holds)
-        let hasRouteAnnotations = holds.contains(where: \.isRoute)
-        let routeCount = holds.filter(\.isRoute).count
+    private static let promptVersion = "route-color-fidelity-v1"
 
-        let annotationInstruction: String
-        if hasRouteAnnotations {
-            annotationInstruction = """
-            Route holds are explicitly annotated. Hard constraint: render only those annotated holds.
-            Do not add, infer, or keep any unannotated hold.
-            """
-        } else {
-            annotationInstruction = "No explicit route subset was annotated. Infer all visible holds from image and render a readable complete hold map."
-        }
-
+    static func prompt(grade: String, routeColor: RouteColor) -> String {
         return """
-        Create a collectible 2D climbing route card from this wall image.
-        \(annotationInstruction)
-        Preserve exact spatial relationships between selected holds.
-        Preserve each selected hold's contour, footprint, and relative size so shape remains recognizable.
-        Never distort route geometry.
-        Style requirements:
-        - clean illustrated card, minimal noise
+        Generate a collectible 2D climbing problem card from this wall photo.
+        Route color selected by user: \(routeColor.promptLabel)
+        This is the only color that belongs to the route.
+        Manual annotation data is not provided and must not be inferred.
+        Ignore any marker-like circles, numbers, or overlays if they appear in the image.
+        They are UI artifacts and are not route semantics.
+
+        Priority order:
+        1) Extremely high spatial fidelity (most important)
+        2) High hold-shape and hold-size fidelity
+        3) Clean simplified card styling
+
+        Hard constraints:
+        - Extract only holds of the selected route color (\(routeColor.promptLabel)).
+        - Do not include holds from other colors, wall features, tapes, labels, logos, bolts, or background artifacts.
+        - If a hold color is ambiguous, exclude it.
+        - Preserve each included hold's silhouette and geometry: contour, corners, concavities, and footprint area.
+        - Preserve relative hold sizes exactly (large vs small differences must remain true).
+        - Preserve spatial layout exactly: same relative positions, spacing, and movement flow.
+        - Do not warp, mirror, rotate, reorder, merge, split, or invent holds.
+
+        Visual style requirements:
+        - simplified abstract rendering with clean edges and subtle depth
+        - geometry must remain faithful; simplify texture only
         - solid warm background color #F4F1EA
-        - preserve each hold's original dominant color family from the source image
-        - keep hold shapes faithful to source (not overly simplified blobs)
-        - active route holds may be slightly more saturated, but keep original hue
+        - prioritize geometric accuracy over creative style
         - no text labels, no letters, no numbers
-        - no connecting lines, arrows, or paths between holds
+        - no arrows, no path lines, no guides
         - full-bleed composition that fills the canvas without black bars or borders
-        - if a hold is not in metadata JSON, it must not appear in output
-        Route holds count target: \(routeCount)
+
         Grade context: \(grade)
-        Hold metadata JSON: \(compactJSON)
         """
     }
 
-    static func signature(grade: String, holds: [HoldRenderSpec]) -> String {
-        let sorted = holds.sorted {
-            let lOrder = $0.orderIndex ?? 999
-            let rOrder = $1.orderIndex ?? 999
-            if lOrder != rOrder { return lOrder < rOrder }
-            if $0.y != $1.y { return $0.y < $1.y }
-            return $0.x < $1.x
-        }
-        let base = sorted.map {
-            "\(round6($0.x))|\(round6($0.y))|\(round6($0.radius))|\($0.role.rawValue)|\($0.orderIndex ?? -1)|\($0.isRoute ? 1 : 0)"
-        }.joined(separator: ";")
-        return stableHash("\(grade)|\(base)")
+    static func signature(grade: String, routeColor: RouteColor) -> String {
+        stableHash("\(promptVersion)|\(grade)|\(routeColor.rawValue)")
     }
 
-    static func cacheSignature(grade: String, holds: [HoldRenderSpec], model: String) -> String {
-        "\(signature(grade: grade, holds: holds))-\(model)"
-    }
-
-    private static func holdsJSONString(_ holds: [HoldRenderSpec]) -> String {
-        let payload = holds.sorted { ($0.orderIndex ?? 999, $0.id.uuidString) < ($1.orderIndex ?? 999, $1.id.uuidString) }
-        guard let data = try? JSONEncoder().encode(payload),
-              let raw = String(data: data, encoding: .utf8) else {
-            return "[]"
-        }
-        return raw
-    }
-
-    private static func round6(_ value: Double) -> String {
-        String(format: "%.6f", value)
+    static func cacheSignature(grade: String, routeColor: RouteColor, model: String) -> String {
+        "\(signature(grade: grade, routeColor: routeColor))-\(model)"
     }
 
     private static func stableHash(_ text: String) -> String {
@@ -286,62 +218,110 @@ enum ProblemCardImageStore {
 }
 
 protocol ProblemCardGenerationService {
-    func generateCard(sourceImage: UIImage, holds: [HoldRenderSpec], grade: String) async throws -> UIImage
+    func generateCard(sourceImage: UIImage, grade: String, routeColor: RouteColor) async throws -> UIImage
 }
 
 struct OpenAIProblemCardService: ProblemCardGenerationService {
     private let logger = Logger(subsystem: "BoulderLog", category: "ProblemCardGeneration")
-    private let ciContext = CIContext(options: [.priorityRequestLow: true])
 
-    func generateCard(sourceImage: UIImage, holds: [HoldRenderSpec], grade: String) async throws -> UIImage {
+    private enum UploadProfile {
+        case fidelity
+        case fallback
+    }
+
+    private struct UploadImagePayload {
+        let data: Data
+        let filename: String
+        let contentType: String
+    }
+
+    func generateCard(sourceImage: UIImage, grade: String, routeColor: RouteColor) async throws -> UIImage {
         let apiKey = AICardSettings.apiKey
         guard !apiKey.isEmpty else {
             throw NSError(domain: "ProblemCard", code: 401, userInfo: [NSLocalizedDescriptionKey: "Missing API key."])
         }
+        let deadline = Date().addingTimeInterval(AICardSettings.requestTimeoutSeconds)
 
         let prepStart = Date()
-        let imageData = try await Task.detached(priority: .utility) {
-            try prepareGuidanceUploadData(sourceImage: sourceImage, holds: holds)
+        let uploadPayload = try await Task.detached(priority: .utility) {
+            try prepareGuidanceUploadPayload(sourceImage: sourceImage, profile: .fidelity)
         }.value
         let prepDuration = Date().timeIntervalSince(prepStart)
+        guard deadline.timeIntervalSinceNow > 0 else {
+            throw timeoutError()
+        }
 
-        let prompt = ProblemCardPromptFactory.prompt(grade: grade, holds: holds)
+        let prompt = ProblemCardPromptFactory.prompt(grade: grade, routeColor: routeColor)
         let networkStart = Date()
 
-        func generateWithSmartSize(model: String) async throws -> UIImage {
+        func remainingTimeout() throws -> TimeInterval {
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0.6 else {
+                throw timeoutError()
+            }
+            return remaining
+        }
+
+        func hasRetryBudget(minimumSeconds: TimeInterval = 8) -> Bool {
+            deadline.timeIntervalSinceNow >= minimumSeconds
+        }
+
+        func generateWithSmartSize(model: String, payload: UploadImagePayload) async throws -> UIImage {
             do {
                 return try await generateImage(
                     apiKey: apiKey,
                     model: model,
                     prompt: prompt,
-                    imageData: imageData,
-                    outputSize: AICardSettings.preferredOutputSize
+                    uploadPayload: payload,
+                    outputSize: AICardSettings.preferredOutputSize,
+                    timeout: try remainingTimeout()
                 )
             } catch {
                 let message = error.localizedDescription.lowercased()
-                let shouldFallbackSize = message.contains("size") || message.contains("invalid")
-                if shouldFallbackSize {
+                let shouldFallbackSize = (message.contains("size") || message.contains("invalid")) && !isTimeoutError(error)
+                if shouldFallbackSize, hasRetryBudget(minimumSeconds: 4) {
                     return try await generateImage(
                         apiKey: apiKey,
                         model: model,
                         prompt: prompt,
-                        imageData: imageData,
-                        outputSize: AICardSettings.fallbackOutputSize
+                        uploadPayload: payload,
+                        outputSize: AICardSettings.fallbackOutputSize,
+                        timeout: try remainingTimeout()
                     )
                 }
                 throw error
             }
         }
 
-        do {
-            let image = try await generateWithSmartSize(model: AICardSettings.model)
-            logger.info("problem_card_generation_success prep_ms=\(Int(prepDuration * 1000)) net_ms=\(Int(Date().timeIntervalSince(networkStart) * 1000)) bytes=\(imageData.count)")
+        func generateWithModelAndPayload(model: String, payload: UploadImagePayload) async throws -> UIImage {
+            let image = try await generateWithSmartSize(model: model, payload: payload)
+            logger.info("problem_card_generation_success model=\(model, privacy: .public) prep_ms=\(Int(prepDuration * 1000)) net_ms=\(Int(Date().timeIntervalSince(networkStart) * 1000)) bytes=\(payload.data.count)")
             return image
+        }
+
+        do {
+            return try await generateWithModelAndPayload(model: AICardSettings.model, payload: uploadPayload)
         } catch {
-            if AICardSettings.model != AICardSettings.fallbackModel {
+            if isTimeoutError(error) {
+                logger.error("problem_card_generation_timeout model=\(AICardSettings.model, privacy: .public) prep_ms=\(Int(prepDuration * 1000)) bytes=\(uploadPayload.data.count)")
+                throw timeoutError()
+            }
+
+            if shouldRetryWithFallbackPayload(error), hasRetryBudget() {
+                logger.info("problem_card_generation_retry_light_payload prep_ms=\(Int(prepDuration * 1000))")
+                let fallbackPayload = try await Task.detached(priority: .utility) {
+                    try prepareGuidanceUploadPayload(sourceImage: sourceImage, profile: .fallback)
+                }.value
+                return try await generateWithModelAndPayload(model: AICardSettings.model, payload: fallbackPayload)
+            }
+
+            if AICardSettings.model != AICardSettings.fallbackModel, hasRetryBudget(), !isTimeoutError(error) {
                 logger.info("problem_card_generation_retry_fallback prep_ms=\(Int(prepDuration * 1000))")
-                let image = try await generateWithSmartSize(model: AICardSettings.fallbackModel)
-                logger.info("problem_card_generation_success_fallback net_ms=\(Int(Date().timeIntervalSince(networkStart) * 1000))")
+                let fallbackPayload = try await Task.detached(priority: .utility) {
+                    try prepareGuidanceUploadPayload(sourceImage: sourceImage, profile: .fallback)
+                }.value
+                let image = try await generateWithSmartSize(model: AICardSettings.fallbackModel, payload: fallbackPayload)
+                logger.info("problem_card_generation_success_fallback net_ms=\(Int(Date().timeIntervalSince(networkStart) * 1000)) bytes=\(fallbackPayload.data.count)")
                 return image
             }
             logger.error("problem_card_generation_failed error=\(error.localizedDescription, privacy: .public)")
@@ -349,16 +329,29 @@ struct OpenAIProblemCardService: ProblemCardGenerationService {
         }
     }
 
-    private func generateImage(apiKey: String, model: String, prompt: String, imageData: Data, outputSize: String) async throws -> UIImage {
+    private func generateImage(
+        apiKey: String,
+        model: String,
+        prompt: String,
+        uploadPayload: UploadImagePayload,
+        outputSize: String,
+        timeout: TimeInterval
+    ) async throws -> UIImage {
         let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: URL(string: "https://api.openai.com/v1/images/edits")!)
         request.httpMethod = "POST"
-        request.timeoutInterval = AICardSettings.requestTimeoutSeconds
+        request.timeoutInterval = timeout
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        request.httpBody = buildMultipartBody(boundary: boundary, model: model, prompt: prompt, imageData: imageData, outputSize: outputSize)
+        request.httpBody = buildMultipartBody(
+            boundary: boundary,
+            model: model,
+            prompt: prompt,
+            uploadPayload: uploadPayload,
+            outputSize: outputSize
+        )
 
-        let (data, response) = try await dataWithTimeout(request: request, timeout: AICardSettings.requestTimeoutSeconds)
+        let (data, response) = try await dataWithTimeout(request: request, timeout: timeout)
 
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "OpenAI image request failed."
@@ -375,7 +368,9 @@ struct OpenAIProblemCardService: ProblemCardGenerationService {
         }
 
         if let urlString = item.url, let url = URL(string: urlString) {
-            let (imgData, _) = try await URLSession.shared.data(from: url)
+            var imageRequest = URLRequest(url: url)
+            imageRequest.timeoutInterval = max(2, min(8, timeout * 0.5))
+            let (imgData, _) = try await URLSession.shared.data(for: imageRequest)
             if let image = UIImage(data: imgData) {
                 return image
             }
@@ -402,7 +397,13 @@ struct OpenAIProblemCardService: ProblemCardGenerationService {
         }
     }
 
-    private func buildMultipartBody(boundary: String, model: String, prompt: String, imageData: Data, outputSize: String) -> Data {
+    private func buildMultipartBody(
+        boundary: String,
+        model: String,
+        prompt: String,
+        uploadPayload: UploadImagePayload,
+        outputSize: String
+    ) -> Data {
         var body = Data()
         let quality = AICardSettings.quality(for: model)
 
@@ -413,9 +414,9 @@ struct OpenAIProblemCardService: ProblemCardGenerationService {
         appendField("n", value: "1", to: &body, boundary: boundary)
 
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"route.jpg\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
-        body.append(imageData)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(uploadPayload.filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(uploadPayload.contentType)\r\n\r\n".data(using: .utf8)!)
+        body.append(uploadPayload.data)
         body.append("\r\n".data(using: .utf8)!)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         return body
@@ -427,15 +428,94 @@ struct OpenAIProblemCardService: ProblemCardGenerationService {
         body.append("\(value)\r\n".data(using: .utf8)!)
     }
 
-    private func prepareGuidanceUploadData(sourceImage: UIImage, holds: [HoldRenderSpec]) throws -> Data {
-        let normalized = downscaled(image: sourceImage, maxDimension: AICardSettings.maxUploadDimension)
-        let contrasted = enhanceContrast(image: normalized) ?? normalized
-        let guided = renderGuidanceImage(sourceImage: contrasted, holds: holds)
+    private func prepareGuidanceUploadPayload(sourceImage: UIImage, profile: UploadProfile) throws -> UploadImagePayload {
+        let maxDimension: CGFloat
+        let jpegQuality: CGFloat
+        let maxJPEGBytes: Int
+        let maxPNGBytes: Int
+        switch profile {
+        case .fidelity:
+            maxDimension = AICardSettings.maxUploadDimension
+            jpegQuality = AICardSettings.uploadJPEGQuality
+            maxJPEGBytes = AICardSettings.maxUploadJPEGBytes
+            maxPNGBytes = AICardSettings.maxUploadPNGBytes
+        case .fallback:
+            maxDimension = AICardSettings.fallbackUploadDimension
+            jpegQuality = AICardSettings.fallbackUploadJPEGQuality
+            maxJPEGBytes = AICardSettings.fallbackMaxUploadJPEGBytes
+            maxPNGBytes = AICardSettings.fallbackMaxUploadPNGBytes
+        }
 
-        guard let data = guided.jpegData(compressionQuality: AICardSettings.uploadJPEGQuality) else {
+        let normalized = downscaled(image: sourceImage, maxDimension: maxDimension)
+        let guided = normalized
+
+        if let jpeg = compressedJPEGData(image: guided, preferredQuality: jpegQuality, maxBytes: maxJPEGBytes) {
+            return UploadImagePayload(data: jpeg, filename: "route.jpg", contentType: "image/jpeg")
+        }
+
+        if let png = guided.pngData(), png.count <= maxPNGBytes {
+            return UploadImagePayload(data: png, filename: "route.png", contentType: "image/png")
+        }
+
+        guard let jpeg = guided.jpegData(compressionQuality: max(0.68, jpegQuality - 0.18)) else {
             throw NSError(domain: "OpenAIProblemCardService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Unable to build upload payload."])
         }
-        return data
+        return UploadImagePayload(data: jpeg, filename: "route.jpg", contentType: "image/jpeg")
+    }
+
+    private func compressedJPEGData(image: UIImage, preferredQuality: CGFloat, maxBytes: Int) -> Data? {
+        let minQuality: CGFloat = 0.66
+
+        func encode(_ source: UIImage, startQuality: CGFloat) -> Data? {
+            var quality = startQuality
+            var smallest: Data?
+
+            while quality >= minQuality {
+                guard let data = source.jpegData(compressionQuality: quality) else { break }
+                if smallest == nil || data.count < smallest!.count {
+                    smallest = data
+                }
+                if data.count <= maxBytes {
+                    return data
+                }
+                quality -= 0.06
+            }
+            return smallest
+        }
+
+        if let preferred = encode(image, startQuality: preferredQuality), preferred.count <= maxBytes {
+            return preferred
+        }
+
+        let reducedMaxDimension = max(960, max(image.size.width, image.size.height) * 0.84)
+        let reduced = downscaled(image: image, maxDimension: reducedMaxDimension)
+        return encode(reduced, startQuality: min(preferredQuality, 0.82))
+    }
+
+    private func isTimeoutError(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "OpenAIProblemCardService", ns.code == 408 {
+            return true
+        }
+        return ns.localizedDescription.lowercased().contains("timed out")
+    }
+
+    private func shouldRetryWithFallbackPayload(_ error: Error) -> Bool {
+        if isTimeoutError(error) { return false }
+        let message = (error as NSError).localizedDescription.lowercased()
+        return message.contains("413")
+            || message.contains("payload")
+            || message.contains("too large")
+            || message.contains("invalid image")
+            || message.contains("unsupported image")
+    }
+
+    private func timeoutError() -> NSError {
+        NSError(
+            domain: "OpenAIProblemCardService",
+            code: 408,
+            userInfo: [NSLocalizedDescriptionKey: "Generation timed out. Please retry."]
+        )
     }
 
     private func downscaled(image: UIImage, maxDimension: CGFloat) -> UIImage {
@@ -451,88 +531,6 @@ struct OpenAIProblemCardService: ProblemCardGenerationService {
 
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: targetSize))
-        }
-    }
-
-    private func enhanceContrast(image: UIImage) -> UIImage? {
-        guard let cgImage = image.cgImage else { return nil }
-        let input = CIImage(cgImage: cgImage)
-        let controls = CIFilter.colorControls()
-        controls.inputImage = input
-        controls.contrast = 1.25
-        controls.saturation = 1.2
-        controls.brightness = 0.02
-
-        guard let output = controls.outputImage,
-              let outCG = ciContext.createCGImage(output, from: output.extent) else {
-            return nil
-        }
-        return UIImage(cgImage: outCG)
-    }
-
-    private func renderGuidanceImage(sourceImage: UIImage, holds: [HoldRenderSpec]) -> UIImage {
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: sourceImage.size, format: format)
-
-        return renderer.image { context in
-            let hasExplicitRoute = holds.contains(where: \.isRoute)
-            let routeHolds = hasExplicitRoute ? holds.filter(\.isRoute) : holds
-
-            let canvasRect = CGRect(origin: .zero, size: sourceImage.size)
-            UIColor(red: 244/255, green: 241/255, blue: 234/255, alpha: 1).setFill()
-            context.fill(canvasRect)
-
-            // Keep only selected holds visible in guidance by compositing localized hold patches.
-            for hold in routeHolds {
-                let center = CGPoint(x: sourceImage.size.width * hold.x, y: sourceImage.size.height * hold.y)
-                let radius = max(20, CGFloat(hold.radius) * min(sourceImage.size.width, sourceImage.size.height) * 2.2)
-                let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2).integral
-
-                let imgRect = CGRect(origin: .zero, size: sourceImage.size)
-                let clipped = rect.intersection(imgRect)
-                guard clipped.width > 4, clipped.height > 4 else { continue }
-
-                if let cg = sourceImage.cgImage?.cropping(to: clipped) {
-                    let patchImage = UIImage(cgImage: cg)
-                    patchImage.draw(in: clipped)
-                }
-            }
-
-            for hold in routeHolds {
-                let center = CGPoint(x: sourceImage.size.width * hold.x, y: sourceImage.size.height * hold.y)
-                let radius = max(8, CGFloat(hold.radius) * min(sourceImage.size.width, sourceImage.size.height))
-                let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
-
-                let stroke: UIColor
-                let fill: UIColor
-                switch hold.role {
-                case .start:
-                    stroke = UIColor(red: 0.46, green: 0.71, blue: 0.45, alpha: 1)
-                case .finish:
-                    stroke = UIColor(red: 0.86, green: 0.54, blue: 0.25, alpha: 1)
-                case .normal:
-                    stroke = UIColor(red: 0.27, green: 0.55, blue: 0.82, alpha: 1)
-                }
-                fill = UIColor.white.withAlphaComponent(0.06)
-
-                context.cgContext.setStrokeColor(stroke.cgColor)
-                context.cgContext.setFillColor(fill.cgColor)
-                context.cgContext.setLineWidth(2.2)
-                context.cgContext.fillEllipse(in: rect)
-                context.cgContext.strokeEllipse(in: rect)
-
-                if let order = hold.orderIndex {
-                    let text = "\(order)" as NSString
-                    let attrs: [NSAttributedString.Key: Any] = [
-                        .font: UIFont.systemFont(ofSize: max(9, radius * 0.65), weight: .medium),
-                        .foregroundColor: UIColor.white
-                    ]
-                    let size = text.size(withAttributes: attrs)
-                    let textRect = CGRect(x: center.x - size.width / 2, y: center.y - size.height / 2, width: size.width, height: size.height)
-                    text.draw(in: textRect, withAttributes: attrs)
-                }
-            }
         }
     }
 
@@ -556,7 +554,13 @@ actor ProblemCardImagePipeline {
     private let service: ProblemCardGenerationService = OpenAIProblemCardService()
     private var inFlight: [String: Task<ProblemCardPipelineResult, Never>] = [:]
 
-    func loadOrGenerate(entryID: UUID, signature: String, sourceImage: UIImage, holds: [HoldRenderSpec], grade: String) async -> ProblemCardPipelineResult {
+    func loadOrGenerate(
+        entryID: UUID,
+        signature: String,
+        sourceImage: UIImage,
+        grade: String,
+        routeColor: RouteColor
+    ) async -> ProblemCardPipelineResult {
         if let cached = ProblemCardImageStore.load(entryID: entryID, signature: signature) {
             return .ready(cached)
         }
@@ -572,7 +576,7 @@ actor ProblemCardImagePipeline {
 
         let task = Task<ProblemCardPipelineResult, Never> {
             do {
-                let image = try await service.generateCard(sourceImage: sourceImage, holds: holds, grade: grade)
+                let image = try await service.generateCard(sourceImage: sourceImage, grade: grade, routeColor: routeColor)
                 ProblemCardImageStore.save(image: image, entryID: entryID, signature: signature)
                 return .ready(image)
             } catch {

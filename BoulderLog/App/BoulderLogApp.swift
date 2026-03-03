@@ -51,7 +51,7 @@ private struct AppLaunchView: View {
             }
         }
         .task {
-            try? await Task.sleep(nanoseconds: 700_000_000)
+            try? await Task.sleep(nanoseconds: 2_100_000_000)
             withAnimation(.easeInOut(duration: 0.35)) {
                 showSplash = false
             }

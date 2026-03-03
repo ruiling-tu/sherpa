@@ -86,7 +86,7 @@ struct NewProjectWizardScreen: View {
             .alert("Annotate Holds Guide", isPresented: $showHoldsHelp) {
                 Button("Got it", role: .cancel) {}
             } message: {
-                Text("Turn on Annotate holds, then tap inside the photo to add markers. Drag markers to move them, long-press to delete, and choose start/finish roles in the editor.")
+                Text("Turn on Annotate holds, then tap inside the photo to add markers. Drag markers to move them, long-press to delete, and choose start/finish roles in the editor. 2D card extraction uses the selected route color from Step 3.")
             }
         }
     }
@@ -150,13 +150,15 @@ struct NewProjectWizardScreen: View {
                 VStack(spacing: DojoSpace.md) {
                     DojoSurface(cornerRadius: 14) {
                         VStack(alignment: .leading, spacing: DojoSpace.sm) {
-                            HStack(spacing: DojoSpace.sm) {
-                                Toggle("Annotate holds", isOn: $vm.annotateMode)
-                                    .tint(DojoTheme.accentPrimary)
+                            Toggle(isOn: $vm.annotateMode) {
+                                Text("Annotate Holds")
                                     .font(DojoType.body)
+                                    .lineLimit(1)
+                                    .fixedSize(horizontal: true, vertical: false)
+                            }
+                            .tint(DojoTheme.accentPrimary)
 
-                                Spacer(minLength: DojoSpace.sm)
-
+                            HStack(spacing: DojoSpace.sm) {
                                 Menu {
                                     ForEach(GradeScale.presets, id: \.self) { grade in
                                         Button(vm.draft.grade == grade ? "\(grade) ✓" : grade) {
@@ -176,6 +178,8 @@ struct NewProjectWizardScreen: View {
                                 }
                                 .buttonStyle(.plain)
 
+                                Spacer(minLength: DojoSpace.sm)
+
                                 if vm.annotateMode {
                                     Button("Clear All") {
                                         vm.clearHolds()
@@ -186,11 +190,13 @@ struct NewProjectWizardScreen: View {
                                 }
                             }
 
-                            Text(vm.annotateMode ? "Tap to add holds. Drag to move. Long-press a marker to delete." : "Turn on Annotate holds to place route markers.")
+                            Text(vm.annotateMode ? "Tap to add holds. Drag to move. Long-press a marker to delete. Route color drives 2D extraction." : "Turn on Annotate holds to place route markers. Route color drives 2D extraction.")
                                 .font(DojoType.caption)
                                 .foregroundStyle(DojoTheme.textSecondary)
                         }
                     }
+
+                    routeColorSelectionSection
 
                     ScrollView {
                         VStack(spacing: DojoSpace.md) {
@@ -220,7 +226,7 @@ struct NewProjectWizardScreen: View {
             if let image = vm.croppedImage {
                 DojoSurface {
                     VStack(alignment: .leading, spacing: DojoSpace.md) {
-                        DojoSectionHeader(title: "2D Problem Card Preview", subtitle: "Uses annotated holds and selected grade for generation")
+                        DojoSectionHeader(title: "2D Problem Card Preview", subtitle: "Uses original photo and selected route color for generation")
 
                         HStack(spacing: DojoSpace.sm) {
                             Menu {
@@ -255,6 +261,7 @@ struct NewProjectWizardScreen: View {
                         DraftProblemCardPreview(
                             image: image,
                             grade: vm.draft.grade,
+                            routeColor: vm.draft.routeColor,
                             holds: vm.draft.holds,
                             refreshToken: previewRefreshToken
                         )
@@ -272,6 +279,10 @@ struct NewProjectWizardScreen: View {
                             .textFieldStyle(.roundedBorder)
 
                         Text("Grade from Step 3: \(vm.draft.grade)")
+                            .font(DojoType.body)
+                            .foregroundStyle(DojoTheme.textSecondary)
+
+                        Text("Route color from Step 3: \(vm.draft.routeColor.title)")
                             .font(DojoType.body)
                             .foregroundStyle(DojoTheme.textSecondary)
 
@@ -306,25 +317,31 @@ struct NewProjectWizardScreen: View {
             }
         case .save:
             DojoSurface {
-                VStack(alignment: .leading, spacing: DojoSpace.lg) {
-                    DojoSectionHeader(title: "Review")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DojoSpace.lg) {
+                        DojoSectionHeader(title: "Review")
 
-                    ReviewSummaryGrid(draft: vm.draft)
+                        if let image = vm.croppedImage {
+                            ReviewCardMediaSection(
+                                sourceImage: image,
+                                generatedImage: generatedPreviewImage,
+                                holds: vm.draft.holds
+                            )
+                        }
 
-                    if let image = vm.croppedImage {
-                        ReviewCardMediaSection(sourceImage: image, generatedImage: generatedPreviewImage)
+                        ReviewSummaryGrid(draft: vm.draft)
+                        ReviewMetadataSection(draft: vm.draft)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     private var generatedPreviewImage: UIImage? {
-        let holds = HoldRenderSpec.fromDrafts(vm.draft.holds)
         let signature = ProblemCardPromptFactory.cacheSignature(
             grade: vm.draft.grade,
-            holds: holds,
+            routeColor: vm.draft.routeColor,
             model: selectedPreviewModel
         )
         return ProblemCardImageStore.load(entryID: ProblemCardImageStore.previewDraftEntryID, signature: signature)
@@ -335,20 +352,78 @@ struct NewProjectWizardScreen: View {
         try? repo.createEntry(in: session, draft: vm.draft)
         dismiss()
     }
+
+    private var routeColorSelectionSection: some View {
+        VStack(alignment: .leading, spacing: DojoSpace.xs) {
+            Text("Choose Route Color")
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+
+            HStack(spacing: DojoSpace.sm) {
+                Menu {
+                    ForEach(RouteColor.allCases) { color in
+                        Button(vm.draft.routeColor == color ? "\(color.title) ✓" : color.title) {
+                            vm.draft.routeColor = color
+                        }
+                    }
+                } label: {
+                    Text(vm.draft.routeColor.title)
+                        .font(DojoType.caption)
+                        .padding(.horizontal, DojoSpace.sm)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.white.opacity(0.75))
+                                .overlay(Capsule(style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text("Used for 2D extraction")
+                    .font(DojoType.caption)
+                    .foregroundStyle(DojoTheme.textSecondary)
+            }
+        }
+        .padding(DojoSpace.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.64))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(DojoTheme.divider, lineWidth: 0.8)
+                )
+        )
+    }
 }
 
 private struct ReviewCardMediaSection: View {
     let sourceImage: UIImage
     let generatedImage: UIImage?
+    let holds: [HoldDraft]
+    private let cardAspectRatio: CGFloat = 2.0 / 3.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: DojoSpace.md) {
-            DojoSectionHeader(title: "Images")
-
-            HStack(alignment: .top, spacing: DojoSpace.md) {
-                mediaCard(title: "Original", image: sourceImage)
+            DojoSectionHeader(title: "Route Visuals", subtitle: "Original + markers and generated 2D card")
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: DojoSpace.md),
+                    GridItem(.flexible(), spacing: DojoSpace.md)
+                ],
+                spacing: DojoSpace.md
+            ) {
+                mediaCard(title: "Original + Markers") {
+                    AnnotatedReviewImage(image: sourceImage, holds: holds)
+                }
                 if let generatedImage {
-                    mediaCard(title: "2D Problem Card", image: generatedImage)
+                    mediaCard(title: "2D Problem Card") {
+                        Image(uiImage: generatedImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    }
                 } else {
                     pendingCard(title: "2D Problem Card")
                 }
@@ -356,7 +431,7 @@ private struct ReviewCardMediaSection: View {
         }
     }
 
-    private func mediaCard(title: String, image: UIImage) -> some View {
+    private func mediaCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DojoSpace.xs) {
             Text(title)
                 .font(DojoType.caption)
@@ -364,12 +439,20 @@ private struct ReviewCardMediaSection: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, minHeight: 16, alignment: .topLeading)
 
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .aspectRatio(2 / 3, contentMode: .fill)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.48))
+
+                content()
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(cardAspectRatio, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(DojoTheme.divider, lineWidth: 0.8)
+            )
+            .clipped()
         }
         .padding(DojoSpace.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -378,7 +461,6 @@ private struct ReviewCardMediaSection: View {
                 .fill(Color.white.opacity(0.7))
                 .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         )
-        .frame(height: 248)
     }
 
     private func pendingCard(title: String) -> some View {
@@ -396,7 +478,8 @@ private struct ReviewCardMediaSection: View {
                     .font(DojoType.caption)
                     .foregroundStyle(DojoTheme.textSecondary)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(cardAspectRatio, contentMode: .fit)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.white.opacity(0.62))
@@ -413,7 +496,36 @@ private struct ReviewCardMediaSection: View {
                 .fill(Color.white.opacity(0.7))
                 .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         )
-        .frame(height: 248)
+    }
+}
+
+private struct AnnotatedReviewImage: View {
+    let image: UIImage
+    let holds: [HoldDraft]
+
+    var body: some View {
+        GeometryReader { geo in
+            let imageRect = ImageSpaceTransform.fittedRect(imageSize: image.size, in: geo.size)
+            ZStack {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: geo.size.width, height: geo.size.height)
+
+                ForEach(holds) { hold in
+                    let center = ImageSpaceTransform.viewPoint(
+                        from: CGPoint(x: hold.xNormalized, y: hold.yNormalized),
+                        imageRect: imageRect
+                    )
+                    DojoHoldMarker(
+                        role: hold.role,
+                        diameter: max(12, CGFloat(hold.radius) * imageRect.width * 2),
+                        orderText: hold.orderIndex.map(String.init)
+                    )
+                    .position(center)
+                }
+            }
+        }
     }
 }
 
@@ -424,6 +536,7 @@ private struct ReviewSummaryGrid: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: DojoSpace.sm), GridItem(.flexible(), spacing: DojoSpace.sm)], spacing: DojoSpace.sm) {
             summaryCard(title: "Name", value: draft.name.isEmpty ? "Untitled" : draft.name)
             summaryCard(title: "Grade", value: draft.grade)
+            summaryCard(title: "Route Color", value: draft.routeColor.title)
             summaryCard(title: "Status", value: draft.status.title)
             summaryCard(title: "Wall", value: draft.wallAngle.title)
             summaryCard(title: "Holds", value: "\(draft.holds.count)")
@@ -451,9 +564,62 @@ private struct ReviewSummaryGrid: View {
     }
 }
 
+private struct ReviewMetadataSection: View {
+    let draft: EntryDraft
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DojoSpace.sm) {
+            DojoSectionHeader(title: "Details")
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: DojoSpace.sm),
+                    GridItem(.flexible(), spacing: DojoSpace.sm)
+                ],
+                spacing: DojoSpace.sm
+            ) {
+                detailCard(title: "Style", value: tagsText(draft.styleTags.map(\.title)))
+                detailCard(title: "Hold Type", value: tagsText(draft.holdTypeTags.map(\.title)))
+                detailCard(title: "Technique", value: tagsText(draft.techniqueTags.map(\.title)))
+                detailCard(title: "Gym", value: draft.gym.isEmpty ? "Not set" : draft.gym)
+                detailCard(
+                    title: "Notes",
+                    value: draft.notes.isEmpty ? "No notes." : draft.notes,
+                    lineLimit: nil
+                )
+                .gridCellColumns(2)
+            }
+        }
+    }
+
+    private func tagsText(_ values: [String]) -> String {
+        values.isEmpty ? "None" : values.joined(separator: ", ")
+    }
+
+    private func detailCard(title: String, value: String, lineLimit: Int? = 3) -> some View {
+        VStack(alignment: .leading, spacing: DojoSpace.xs) {
+            Text(title)
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+            Text(value)
+                .font(DojoType.body)
+                .lineLimit(lineLimit)
+                .minimumScaleFactor(0.9)
+        }
+        .padding(DojoSpace.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.7))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+        )
+    }
+}
+
 private struct DraftProblemCardPreview: View {
     let image: UIImage
     let grade: String
+    let routeColor: RouteColor
     let holds: [HoldDraft]
     let refreshToken: Int
 
@@ -465,6 +631,7 @@ private struct DraftProblemCardPreview: View {
             holds: transientHolds,
             sourceImage: image,
             grade: grade,
+            routeColor: routeColor,
             refreshTrigger: refreshToken,
             onTapHold: { _ in }
         )

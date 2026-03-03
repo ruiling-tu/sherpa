@@ -5,6 +5,7 @@ struct ProblemCard2DView: View {
     let holds: [HoldEntity]
     let sourceImage: UIImage?
     let grade: String
+    let routeColor: RouteColor
     var refreshTrigger: Int = 0
     let onTapHold: (HoldEntity) -> Void
 
@@ -22,12 +23,8 @@ struct ProblemCard2DView: View {
         holds.sorted { ($0.orderIndex ?? 999) < ($1.orderIndex ?? 999) }
     }
 
-    private var holdSpecs: [HoldRenderSpec] {
-        HoldRenderSpec.fromEntities(sortedHolds)
-    }
-
     private var signature: String {
-        ProblemCardPromptFactory.cacheSignature(grade: grade, holds: holdSpecs, model: model)
+        ProblemCardPromptFactory.cacheSignature(grade: grade, routeColor: routeColor, model: model)
     }
 
     private var aiTaskKey: String {
@@ -37,25 +34,26 @@ struct ProblemCard2DView: View {
     var body: some View {
         GeometryReader { geo in
             let frame = HoldShapeRenderer.frameColor(for: grade)
-            let frameTier = museumFrameTier
+            let frameHighlight = HoldShapeRenderer.frameHighlight(for: grade)
+            let frameLevel = Double(HoldShapeRenderer.clampedGradeValue(grade))
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.white.opacity(0.86))
-                    .shadow(color: frame.opacity(frameTier >= 3 ? 0.24 : 0.16), radius: frameTier >= 3 ? 9 : 6, x: 0, y: 3)
+                    .shadow(color: frame.opacity(0.14 + frameLevel * 0.01), radius: CGFloat(5 + frameLevel * 0.45), x: 0, y: 3)
 
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
                         LinearGradient(
-                            colors: [frame.opacity(0.96), frame.opacity(0.72), Color.white.opacity(0.86)],
+                            colors: [frame.opacity(0.96), frameHighlight.opacity(0.82), Color.white.opacity(0.86)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: frameTier >= 4 ? 3.8 : (frameTier >= 3 ? 3.2 : 2.8)
+                        lineWidth: CGFloat(2.4 + frameLevel * 0.14)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .inset(by: 4)
-                            .stroke(frame.opacity(frameTier >= 2 ? 0.5 : 0.34), lineWidth: frameTier >= 3 ? 1.8 : 1.2)
+                            .stroke(frame.opacity(0.34 + frameLevel * 0.02), lineWidth: CGFloat(1.0 + frameLevel * 0.07))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -63,49 +61,63 @@ struct ProblemCard2DView: View {
                             .stroke(Color.white.opacity(0.45), lineWidth: 0.8)
                     )
                     .overlay {
-                        if frameTier >= 2 {
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .inset(by: 8)
-                                .stroke(frame.opacity(frameTier >= 4 ? 0.34 : 0.22), lineWidth: frameTier >= 4 ? 1.8 : 1.2)
+                        if frameLevel >= 1 {
+                                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                    .inset(by: 8)
+                                    .stroke(frame.opacity(0.2 + frameLevel * 0.015), lineWidth: CGFloat(0.9 + frameLevel * 0.07))
+                            }
                         }
-                    }
                     .overlay(alignment: .topLeading) {
-                        if frameTier >= 3 {
-                            frameCornerOrnament(color: frame)
+                        if frameLevel >= 2 {
+                            frameCornerOrnament(color: frame, level: frameLevel)
                                 .padding(6)
                         }
                     }
                     .overlay(alignment: .topTrailing) {
-                        if frameTier >= 3 {
-                            frameCornerOrnament(color: frame)
+                        if frameLevel >= 2 {
+                            frameCornerOrnament(color: frame, level: frameLevel)
                                 .padding(6)
                                 .rotationEffect(.degrees(90))
                         }
                     }
                     .overlay(alignment: .bottomTrailing) {
-                        if frameTier >= 3 {
-                            frameCornerOrnament(color: frame)
+                        if frameLevel >= 2 {
+                            frameCornerOrnament(color: frame, level: frameLevel)
                                 .padding(6)
                                 .rotationEffect(.degrees(180))
                         }
                     }
                     .overlay(alignment: .bottomLeading) {
-                        if frameTier >= 3 {
-                            frameCornerOrnament(color: frame)
+                        if frameLevel >= 2 {
+                            frameCornerOrnament(color: frame, level: frameLevel)
                                 .padding(6)
                                 .rotationEffect(.degrees(270))
                         }
                     }
                     .overlay(alignment: .top) {
-                        if frameTier >= 4 {
-                            frameCenterOrnament(color: frame)
+                        if frameLevel >= 4 {
+                            frameCenterOrnament(color: frame, level: frameLevel)
                                 .padding(.top, 5)
                         }
                     }
                     .overlay(alignment: .bottom) {
-                        if frameTier >= 4 {
-                            frameCenterOrnament(color: frame)
+                        if frameLevel >= 4 {
+                            frameCenterOrnament(color: frame, level: frameLevel)
                                 .padding(.bottom, 5)
+                        }
+                    }
+                    .overlay(alignment: .leading) {
+                        if frameLevel >= 7 {
+                            frameCenterOrnament(color: frame, level: frameLevel)
+                                .rotationEffect(.degrees(90))
+                                .padding(.leading, 5)
+                        }
+                    }
+                    .overlay(alignment: .trailing) {
+                        if frameLevel >= 7 {
+                            frameCenterOrnament(color: frame, level: frameLevel)
+                                .rotationEffect(.degrees(90))
+                                .padding(.trailing, 5)
                         }
                     }
 
@@ -135,35 +147,25 @@ struct ProblemCard2DView: View {
         }
     }
 
-    private var museumFrameTier: Int {
-        let value = HoldShapeRenderer.gradeValue(grade)
-        switch value {
-        case ...1: return 1
-        case 2: return 2
-        case 3: return 3
-        default: return 4
-        }
-    }
-
-    private func frameCornerOrnament(color: Color) -> some View {
+    private func frameCornerOrnament(color: Color, level: Double) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(color.opacity(0.2))
                 .frame(width: 14, height: 14)
 
             RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .stroke(color.opacity(0.78), lineWidth: 1.0)
+                .stroke(color.opacity(0.72 + level * 0.015), lineWidth: CGFloat(0.9 + level * 0.04))
                 .frame(width: 10, height: 10)
         }
     }
 
-    private func frameCenterOrnament(color: Color) -> some View {
+    private func frameCenterOrnament(color: Color, level: Double) -> some View {
         Capsule(style: .continuous)
-            .fill(color.opacity(0.22))
+            .fill(color.opacity(0.18 + level * 0.01))
             .frame(width: 34, height: 8)
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(color.opacity(0.72), lineWidth: 1)
+                    .stroke(color.opacity(0.7 + level * 0.012), lineWidth: CGFloat(0.9 + level * 0.04))
             )
     }
 
@@ -204,7 +206,7 @@ struct ProblemCard2DView: View {
         if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return "Set your API key in Settings."
         }
-        return "Tap Regenerate to request a new card."
+        return "Tap Regenerate to extract \(routeColor.title.lowercased()) holds."
     }
 
     private var loadingCard: some View {
@@ -281,7 +283,7 @@ struct ProblemCard2DView: View {
         ZStack(alignment: .bottomTrailing) {
             Image(uiImage: image)
                 .resizable()
-                .scaledToFit()
+                .scaledToFill()
                 .frame(width: geo.size.width - 18, height: geo.size.height - 18)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
@@ -301,30 +303,14 @@ struct ProblemCard2DView: View {
             let x = geo.size.width * hold.xNormalized
             let y = geo.size.height * hold.yNormalized
             let base = max(28, min(56, CGFloat(hold.radius) * min(geo.size.width, geo.size.height) * 2.5))
-
-            if let order = hold.orderIndex {
-                Text("\(order)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(DojoTheme.textPrimary.opacity(0.72))
-                    .padding(4)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(0.38))
-                    )
-                    .position(x: x, y: y)
-                    .onTapGesture {
-                        onTapHold(hold)
-                    }
-            } else {
-                Circle()
-                    .fill(Color.clear)
-                    .frame(width: base, height: base)
-                    .contentShape(Circle())
-                    .position(x: x, y: y)
-                    .onTapGesture {
-                        onTapHold(hold)
-                    }
-            }
+            Circle()
+                .fill(Color.clear)
+                .frame(width: base, height: base)
+                .contentShape(Circle())
+                .position(x: x, y: y)
+                .onTapGesture {
+                    onTapHold(hold)
+                }
         }
     }
 
@@ -360,8 +346,8 @@ struct ProblemCard2DView: View {
             entryID: entryID,
             signature: signature,
             sourceImage: sourceImage,
-            holds: holdSpecs,
-            grade: grade
+            grade: grade,
+            routeColor: routeColor
         )
         switch result {
         case .ready(let generated):
