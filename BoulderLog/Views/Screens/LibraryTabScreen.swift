@@ -237,17 +237,23 @@ private struct LibraryCard: View {
                     grade: entry.grade,
                     onTapHold: { _ in }
                 )
-                .frame(height: 150)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(2 / 3, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 Text(entry.name.isEmpty ? "Untitled" : entry.name)
                     .font(DojoType.section)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.9)
 
-                HStack {
+                HStack(spacing: DojoSpace.sm) {
                     DojoTagChip(title: entry.grade, selected: true)
                     DojoTagChip(title: entry.status.title, selected: false)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

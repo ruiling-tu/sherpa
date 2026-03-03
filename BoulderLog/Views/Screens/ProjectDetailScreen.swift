@@ -39,6 +39,7 @@ struct ProjectDetailScreen: View {
                             ProblemCard2DView(entryID: entry.id, holds: sortedHolds, sourceImage: ImageStore.load(path: entry.imagePath), grade: entry.grade, refreshTrigger: cardRefreshToken) { hold in
                                 selectedHold = hold
                             }
+                            .frame(height: 240)
                         }
                     }
 

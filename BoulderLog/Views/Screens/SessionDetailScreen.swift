@@ -3,10 +3,9 @@ import SwiftData
 
 struct SessionDetailScreen: View {
     @Environment(\.modelContext) private var context
-    @Environment(\.dismiss) private var dismiss
     @Bindable var session: SessionEntity
     @State private var showWizard = false
-    @State private var showDeleteConfirm = false
+    @State private var entryToDelete: ProjectEntryEntity?
 
     var body: some View {
         DojoScreen {
@@ -48,10 +47,17 @@ struct SessionDetailScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button(role: .destructive) {
-                        showDeleteConfirm = true
-                    } label: {
-                        Label("Delete Session", systemImage: "trash")
+                    if sortedEntries.isEmpty {
+                        Button("No Projects to Delete") {}
+                            .disabled(true)
+                    } else {
+                        ForEach(sortedEntries) { entry in
+                            Button(role: .destructive) {
+                                entryToDelete = entry
+                            } label: {
+                                Label("Delete \(entry.name.isEmpty ? "Untitled Project" : entry.name)", systemImage: "trash")
+                            }
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -62,15 +68,20 @@ struct SessionDetailScreen: View {
         .sheet(isPresented: $showWizard) {
             NewProjectWizardScreen(session: session)
         }
-        .alert("Delete this session?", isPresented: $showDeleteConfirm) {
+        .alert("Delete this project?", isPresented: Binding(
+            get: { entryToDelete != nil },
+            set: { if !$0 { entryToDelete = nil } }
+        )) {
             Button("Delete", role: .destructive) {
-                let repo = ProjectRepository(context: context)
-                try? repo.deleteSession(session)
-                dismiss()
+                guard let entryToDelete else { return }
+                try? ProjectRepository(context: context).deleteEntry(entryToDelete)
+                self.entryToDelete = nil
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                entryToDelete = nil
+            }
         } message: {
-            Text("This removes all projects, holds, and stored images in this session.")
+            Text("This removes the project, its holds, and stored images.")
         }
     }
 

@@ -57,6 +57,7 @@ final class NewProjectWizardViewModel: ObservableObject {
     }
 
     func addHold(at normalizedPoint: CGPoint) {
+        guard annotateMode else { return }
         let hold = HoldDraft(xNormalized: normalizedPoint.x, yNormalized: normalizedPoint.y)
         draft.holds.append(hold)
         selectedHoldID = hold.id
@@ -82,21 +83,28 @@ final class NewProjectWizardViewModel: ObservableObject {
         selectedHoldID = nil
     }
 
-    func clearAnnotations() {
-        for index in draft.holds.indices {
-            draft.holds[index].orderIndex = nil
-        }
+    func clearHolds() {
+        draft.holds.removeAll()
+        selectedHoldID = nil
     }
 
     func selectedHoldBinding() -> Binding<HoldDraft>? {
         guard let selectedHoldID,
-              let idx = draft.holds.firstIndex(where: { $0.id == selectedHoldID }) else {
+              draft.holds.contains(where: { $0.id == selectedHoldID }) else {
             return nil
         }
 
         return Binding(
-            get: { self.draft.holds[idx] },
-            set: { self.draft.holds[idx] = $0 }
+            get: {
+                guard let idx = self.draft.holds.firstIndex(where: { $0.id == selectedHoldID }) else {
+                    return HoldDraft(xNormalized: 0.5, yNormalized: 0.5)
+                }
+                return self.draft.holds[idx]
+            },
+            set: { updated in
+                guard let idx = self.draft.holds.firstIndex(where: { $0.id == selectedHoldID }) else { return }
+                self.draft.holds[idx] = updated
+            }
         )
     }
 

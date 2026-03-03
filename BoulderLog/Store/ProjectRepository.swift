@@ -56,6 +56,19 @@ struct ProjectRepository {
 
         context.insert(entry)
         try context.save()
+
+        // Reuse the generated preview card so Library can render immediately after save.
+        let holdSpecs = HoldRenderSpec.fromDrafts(draft.holds)
+        let signature = ProblemCardPromptFactory.cacheSignature(grade: draft.grade, holds: holdSpecs, model: AICardSettings.model)
+        ProblemCardImageStore.cloneCachedCard(
+            from: ProblemCardImageStore.previewDraftEntryID,
+            to: entry.id,
+            signature: signature
+        )
+        if ProblemCardImageStore.load(entryID: entry.id, signature: signature) == nil,
+           let previewImage = ProblemCardImageStore.loadAny(entryID: ProblemCardImageStore.previewDraftEntryID) {
+            ProblemCardImageStore.save(image: previewImage, entryID: entry.id, signature: signature)
+        }
     }
 
     func saveEntry(_ entry: ProjectEntryEntity) throws {

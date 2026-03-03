@@ -32,7 +32,7 @@ struct SettingsScreen: View {
                                     .font(DojoType.body)
 
                                 VStack(alignment: .leading, spacing: DojoSpace.xs) {
-                                    Text("OpenAI API Key (Optional Override)")
+                                    Text("OpenAI API Key (Preconfigured, Optional Override)")
                                         .font(DojoType.caption)
                                         .foregroundStyle(DojoTheme.textSecondary)
                                     Group {
