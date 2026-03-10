@@ -1,360 +1,387 @@
 import SwiftUI
+import UIKit
 
 struct ProblemCard2DView: View {
     let entryID: UUID
     let holds: [HoldEntity]
     let sourceImage: UIImage?
+    let wallOutline: [CGPoint]
     let grade: String
     let routeColor: RouteColor
+    let wallAngle: WallAngle
     var refreshTrigger: Int = 0
     let onTapHold: (HoldEntity) -> Void
-
-    @AppStorage(AICardSettings.enabledKey) private var aiEnabled = true
-    @AppStorage(AICardSettings.apiKeyKey) private var apiKey = AICardSettings.bundledDefaultAPIKey
-    @AppStorage(AICardSettings.modelKey) private var model = AICardSettings.defaultModel
-
-    @State private var aiImage: UIImage?
-    @State private var isGenerating = false
-    @State private var generationError: String?
-    @State private var retryNonce = 0
-    @State private var lastHandledRefreshTrigger = 0
 
     private var sortedHolds: [HoldEntity] {
         holds.sorted { ($0.orderIndex ?? 999) < ($1.orderIndex ?? 999) }
     }
 
-    private var signature: String {
-        ProblemCardPromptFactory.cacheSignature(grade: grade, routeColor: routeColor, model: model)
+    var body: some View {
+        GeometryReader { geo in
+            let contentRect = blueprintContentRect(size: geo.size)
+            ZStack {
+                RouteBlueprintArtwork(
+                    holds: sortedHolds,
+                    sourceImage: sourceImage,
+                    wallOutline: wallOutline,
+                    grade: grade,
+                    routeColor: routeColor,
+                    wallAngle: wallAngle
+                )
+
+                ForEach(sortedHolds) { hold in
+                    HoldContourShape(points: hold.contourPoints, drawRect: contentRect)
+                        .fill(Color.clear)
+                        .contentShape(HoldContourShape(points: hold.contourPoints, drawRect: contentRect))
+                        .onTapGesture {
+                            onTapHold(hold)
+                        }
+                }
+            }
+        }
     }
 
-    private var aiTaskKey: String {
-        "\(entryID.uuidString)-\(signature)-\(aiEnabled)-\(model)-\(refreshTrigger)-\(retryNonce)-\(!apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)"
+    private func blueprintContentRect(size: CGSize) -> CGRect {
+        let outerRect = CGRect(origin: .zero, size: size)
+        let innerRect = outerRect.insetBy(dx: 16, dy: 16)
+        guard let sourceImage else { return innerRect }
+        let fitted = ImageSpaceTransform.fittedRect(imageSize: sourceImage.size, in: innerRect.size)
+        return fitted.offsetBy(dx: innerRect.minX, dy: innerRect.minY)
     }
+}
+
+struct RouteBlueprintArtwork: View {
+    let holds: [HoldEntity]
+    let sourceImage: UIImage?
+    let wallOutline: [CGPoint]
+    let grade: String
+    let routeColor: RouteColor
+    let wallAngle: WallAngle
+
+    private let surfaceColor = Color(hex: "F4F0E8")
 
     var body: some View {
         GeometryReader { geo in
-            let frame = HoldShapeRenderer.frameColor(for: grade)
+            let frameColor = HoldShapeRenderer.frameColor(for: grade)
             let frameHighlight = HoldShapeRenderer.frameHighlight(for: grade)
-            let frameLevel = Double(HoldShapeRenderer.clampedGradeValue(grade))
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.86))
-                    .shadow(color: frame.opacity(0.14 + frameLevel * 0.01), radius: CGFloat(5 + frameLevel * 0.45), x: 0, y: 3)
+            let outerRect = CGRect(origin: .zero, size: geo.size)
+            let innerRect = outerRect.insetBy(dx: 16, dy: 16)
+            let sourceRect = sourceImage.map {
+                ImageSpaceTransform.fittedRect(imageSize: $0.size, in: innerRect.size)
+                    .offsetBy(dx: innerRect.minX, dy: innerRect.minY)
+            } ?? innerRect
+            let wallPath = wallShape(in: innerRect)
 
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(surfaceColor)
+                    .shadow(color: frameColor.opacity(0.16), radius: 12, x: 0, y: 6)
+
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(
                         LinearGradient(
-                            colors: [frame.opacity(0.96), frameHighlight.opacity(0.82), Color.white.opacity(0.86)],
+                            colors: [frameHighlight.opacity(0.92), frameColor.opacity(0.95)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: CGFloat(2.4 + frameLevel * 0.14)
+                        lineWidth: 2.6
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .inset(by: 4)
-                            .stroke(frame.opacity(0.34 + frameLevel * 0.02), lineWidth: CGFloat(1.0 + frameLevel * 0.07))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .inset(by: 1)
-                            .stroke(Color.white.opacity(0.45), lineWidth: 0.8)
+
+                wallPath
+                    .fill(
+                        LinearGradient(
+                            colors: wallGradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
                     .overlay {
-                        if frameLevel >= 1 {
-                                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                    .inset(by: 8)
-                                    .stroke(frame.opacity(0.2 + frameLevel * 0.015), lineWidth: CGFloat(0.9 + frameLevel * 0.07))
-                            }
-                        }
-                    .overlay(alignment: .topLeading) {
-                        if frameLevel >= 2 {
-                            frameCornerOrnament(color: frame, level: frameLevel)
-                                .padding(6)
-                        }
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        if frameLevel >= 2 {
-                            frameCornerOrnament(color: frame, level: frameLevel)
-                                .padding(6)
-                                .rotationEffect(.degrees(90))
-                        }
-                    }
-                    .overlay(alignment: .bottomTrailing) {
-                        if frameLevel >= 2 {
-                            frameCornerOrnament(color: frame, level: frameLevel)
-                                .padding(6)
-                                .rotationEffect(.degrees(180))
-                        }
-                    }
-                    .overlay(alignment: .bottomLeading) {
-                        if frameLevel >= 2 {
-                            frameCornerOrnament(color: frame, level: frameLevel)
-                                .padding(6)
-                                .rotationEffect(.degrees(270))
-                        }
-                    }
-                    .overlay(alignment: .top) {
-                        if frameLevel >= 4 {
-                            frameCenterOrnament(color: frame, level: frameLevel)
-                                .padding(.top, 5)
-                        }
-                    }
-                    .overlay(alignment: .bottom) {
-                        if frameLevel >= 4 {
-                            frameCenterOrnament(color: frame, level: frameLevel)
-                                .padding(.bottom, 5)
-                        }
-                    }
-                    .overlay(alignment: .leading) {
-                        if frameLevel >= 7 {
-                            frameCenterOrnament(color: frame, level: frameLevel)
-                                .rotationEffect(.degrees(90))
-                                .padding(.leading, 5)
-                        }
-                    }
-                    .overlay(alignment: .trailing) {
-                        if frameLevel >= 7 {
-                            frameCenterOrnament(color: frame, level: frameLevel)
-                                .rotationEffect(.degrees(90))
-                                .padding(.trailing, 5)
-                        }
+                        wallPath.stroke(Color.black.opacity(0.08), lineWidth: 1)
                     }
 
-                if let aiImage {
-                    aiCard(image: aiImage, geo: geo)
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                } else if isGenerating {
-                    loadingCard
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                } else if let generationError,
-                          aiEnabled,
-                          !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                          sourceImage != nil {
-                    failedCard(message: generationError)
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                } else {
-                    waitingCard
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                wallPath
+                    .stroke(Color.black.opacity(0.12), style: StrokeStyle(lineWidth: 1.4, dash: [8, 6]))
+
+                wallAtmosphere(in: innerRect)
+
+                ForEach(holds) { hold in
+                    holdView(for: hold, drawRect: sourceRect)
                 }
+
+                if holds.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "circle.dashed")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(DojoTheme.textSecondary)
+                        Text("No holds detected")
+                            .font(DojoType.body)
+                            .foregroundStyle(DojoTheme.textPrimary)
+                        Text("Re-extract with a tighter crop or redraw a missed outline.")
+                            .font(DojoType.caption)
+                            .foregroundStyle(DojoTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(18)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.white.opacity(0.8))
+                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
+                    )
+                }
+
+                metadataBadge
+                    .padding(14)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
-        }
-        .animation(.easeInOut(duration: 0.24), value: isGenerating)
-        .animation(.easeInOut(duration: 0.24), value: aiImage != nil)
-        .animation(.easeInOut(duration: 0.24), value: generationError != nil)
-        .task(id: aiTaskKey) {
-            await resolveAICardIfNeeded()
         }
     }
 
-    private func frameCornerOrnament(color: Color, level: Double) -> some View {
+    private var wallGradient: [Color] {
+        switch wallAngle {
+        case .slab:
+            return [Color(hex: "FBF8F1"), Color(hex: "E7DED0")]
+        case .vert:
+            return [Color(hex: "F3EBDF"), Color(hex: "D7CBB8")]
+        case .overhang:
+            return [Color(hex: "DDCEBB"), Color(hex: "B29E88")]
+        }
+    }
+
+    private func wallShape(in rect: CGRect) -> Path {
+        let points = normalizedWallOutline.map { point in
+            CGPoint(
+                x: rect.minX + point.x * rect.width,
+                y: rect.minY + point.y * rect.height
+            )
+        }
+
+        return Path { path in
+            guard let first = points.first else { return }
+            path.move(to: first)
+            for point in points.dropFirst() {
+                path.addLine(to: point)
+            }
+            path.closeSubpath()
+        }
+    }
+
+    private var normalizedWallOutline: [CGPoint] {
+        let points = wallOutline.isEmpty ? RouteGeometry.defaultWallOutline : wallOutline
+        return points.map(RouteGeometry.clamped)
+    }
+
+    private func wallAtmosphere(in rect: CGRect) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(color.opacity(0.2))
-                .frame(width: 14, height: 14)
-
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .stroke(color.opacity(0.72 + level * 0.015), lineWidth: CGFloat(0.9 + level * 0.04))
-                .frame(width: 10, height: 10)
-        }
-    }
-
-    private func frameCenterOrnament(color: Color, level: Double) -> some View {
-        Capsule(style: .continuous)
-            .fill(color.opacity(0.18 + level * 0.01))
-            .frame(width: 34, height: 8)
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(color.opacity(0.7 + level * 0.012), lineWidth: CGFloat(0.9 + level * 0.04))
+            RadialGradient(
+                colors: [Color.white.opacity(0.34), Color.clear],
+                center: .topLeading,
+                startRadius: 20,
+                endRadius: max(rect.width, rect.height) * 0.9
             )
-    }
+            .clipShape(wallShape(in: rect))
 
-    private var waitingCard: some View {
-        VStack(spacing: DojoSpace.sm) {
-            Image(systemName: "sparkles.rectangle.stack")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(DojoTheme.textSecondary)
-            Text("Problem Card preview is ready to generate.")
-                .font(DojoType.body)
-                .foregroundStyle(DojoTheme.textPrimary)
-                .multilineTextAlignment(.center)
-            Text(waitingSubtitle)
-                .font(DojoType.caption)
-                .foregroundStyle(DojoTheme.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(DojoSpace.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.62))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DojoTheme.divider, lineWidth: 0.8)
-                )
-                .padding(DojoSpace.md)
-        )
-    }
-
-    private var waitingSubtitle: String {
-        if sourceImage == nil {
-            return "Select and crop a wall photo to create a card."
-        }
-        if !aiEnabled {
-            return "Enable AI in Settings to generate a 2D Problem Card."
-        }
-        if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Set your API key in Settings."
-        }
-        return "Tap Regenerate to extract \(routeColor.title.lowercased()) holds."
-    }
-
-    private var loadingCard: some View {
-        VStack(spacing: DojoSpace.sm) {
-            ProgressView()
-                .controlSize(.regular)
-                .tint(DojoTheme.accentPrimary)
-            Text("Generating your Problem Card...")
-                .font(DojoType.body)
-                .foregroundStyle(DojoTheme.textPrimary)
-                .multilineTextAlignment(.center)
-            Text("This usually takes a few seconds.")
-                .font(DojoType.caption)
-                .foregroundStyle(DojoTheme.textSecondary)
-        }
-        .padding(DojoSpace.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.62))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DojoTheme.divider, lineWidth: 0.8)
-                )
-                .padding(DojoSpace.md)
-        )
-    }
-
-    private func failedCard(message: String) -> some View {
-        VStack(spacing: DojoSpace.sm) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(DojoTheme.accentPrimary)
-            Text("Problem Card generation failed.")
-                .font(DojoType.body)
-                .foregroundStyle(DojoTheme.textPrimary)
-                .multilineTextAlignment(.center)
-            Text(message)
-                .font(DojoType.caption)
-                .foregroundStyle(DojoTheme.textSecondary)
-                .lineLimit(3)
-                .multilineTextAlignment(.center)
-
-            Button("Retry") {
-                generationError = nil
-                retryNonce += 1
+            ForEach(0..<7, id: \.self) { index in
+                wallShape(in: rect)
+                    .stroke(
+                        routeColor.swatch.opacity(index == 0 ? 0.05 : 0.025),
+                        style: StrokeStyle(lineWidth: index == 0 ? 1.2 : 0.8, dash: [CGFloat(12 + index * 2), CGFloat(10 + index * 2)])
+                    )
+                    .scaleEffect(
+                        x: 1 - CGFloat(index) * 0.035,
+                        y: 1 - CGFloat(index) * 0.045,
+                        anchor: .center
+                    )
+                    .blendMode(.multiply)
             }
-            .font(DojoType.caption)
-            .foregroundStyle(DojoTheme.accentPrimary)
-            .padding(.horizontal, DojoSpace.md)
-            .padding(.vertical, DojoSpace.xs)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(Color.white.opacity(0.82))
-                    .overlay(Capsule(style: .continuous).stroke(DojoTheme.divider, lineWidth: 0.8))
-            )
-            .buttonStyle(.plain)
         }
-        .padding(DojoSpace.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.62))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DojoTheme.divider, lineWidth: 0.8)
-                )
-                .padding(DojoSpace.md)
-        )
+        .allowsHitTesting(false)
     }
 
-    @ViewBuilder
-    private func aiCard(image: UIImage, geo: GeometryProxy) -> some View {
-        ZStack(alignment: .bottomTrailing) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: geo.size.width - 18, height: geo.size.height - 18)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    private func holdView(for hold: HoldEntity, drawRect: CGRect) -> some View {
+        let contour = hold.contourPoints
+        let roleAccent: Color = {
+            switch hold.role {
+            case .start: return Color(hex: "5B9B64")
+            case .finish: return Color(hex: "BC5441")
+            case .normal: return routeColor.shadowSwatch
+            }
+        }()
 
-            Text(grade)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.white)
-                .padding(.horizontal, DojoSpace.sm)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(HoldShapeRenderer.frameColor(for: grade).opacity(0.95))
-                )
-                .padding(DojoSpace.sm)
+        return ZStack {
+            if let sourceImage {
+                Image(uiImage: sourceImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: drawRect.width, height: drawRect.height)
+                    .position(x: drawRect.midX, y: drawRect.midY)
+                    .saturation(0.72)
+                    .contrast(1.28)
+                    .brightness(0.02)
+                    .mask(HoldContourShape(points: contour, drawRect: drawRect))
+                    .overlay {
+                        HoldContourShape(points: contour, drawRect: drawRect)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.34), Color.clear, Color.black.opacity(0.18)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        HoldContourShape(points: contour, drawRect: drawRect)
+                            .fill(routeColor.swatch.opacity(0.22))
+                            .blendMode(.softLight)
+                    }
+                    .overlay {
+                        HoldContourShape(points: contour, drawRect: drawRect)
+                            .fill(
+                                RadialGradient(
+                                    colors: [routeColor.swatch.opacity(0.18), Color.clear],
+                                    center: .topLeading,
+                                    startRadius: 10,
+                                    endRadius: max(drawRect.width, drawRect.height) * 0.5
+                                )
+                            )
+                    }
+            } else {
+                HoldContourShape(points: contour, drawRect: drawRect)
+                    .fill(routeColor.swatch.opacity(0.92))
+            }
         }
-
-        ForEach(sortedHolds) { hold in
-            let x = geo.size.width * hold.xNormalized
-            let y = geo.size.height * hold.yNormalized
-            let base = max(28, min(56, CGFloat(hold.radius) * min(geo.size.width, geo.size.height) * 2.5))
-            Circle()
-                .fill(Color.clear)
-                .frame(width: base, height: base)
-                .contentShape(Circle())
-                .position(x: x, y: y)
-                .onTapGesture {
-                    onTapHold(hold)
+            .background {
+                HoldContourShape(points: contour, drawRect: drawRect, inset: -2)
+                    .fill(Color.white.opacity(0.18))
+                    .blur(radius: 6)
+            }
+            .overlay {
+                HoldContourShape(points: contour, drawRect: drawRect)
+                    .stroke(routeColor.shadowSwatch.opacity(0.85), lineWidth: 1.6)
+            }
+            .overlay {
+                HoldContourShape(points: contour, drawRect: drawRect)
+                    .stroke(Color.white.opacity(0.24), lineWidth: 1.0)
+                    .blur(radius: 0.4)
+            }
+            .overlay {
+                HoldContourShape(points: contour, drawRect: drawRect, inset: 4)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 0.8)
+            }
+            .shadow(color: routeColor.shadowSwatch.opacity(0.26), radius: 7, x: 0, y: 4)
+            .overlay(alignment: .center) {
+                if let order = hold.orderIndex {
+                    Text("\(order)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.white)
+                        .padding(5)
+                        .background(
+                            Circle()
+                                .fill(roleAccent.opacity(0.9))
+                        )
                 }
-        }
+            }
+            .overlay(alignment: .topLeading) {
+                if hold.role != .normal {
+                    Circle()
+                        .fill(roleAccent)
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 1))
+                        .padding(6)
+                }
+            }
     }
 
-    @MainActor
-    private func resolveAICardIfNeeded() async {
-        if refreshTrigger > lastHandledRefreshTrigger {
-            ProblemCardImageStore.invalidate(entryID: entryID)
-            aiImage = nil
-            generationError = nil
-            lastHandledRefreshTrigger = refreshTrigger
+    private var metadataBadge: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Text(grade)
+                .font(.system(size: 12, weight: .bold))
+            Text(wallAngle.title)
+                .font(.system(size: 10, weight: .medium))
         }
-
-        let allowLooseCache = entryID != ProblemCardImageStore.previewDraftEntryID
-        aiImage = ProblemCardImageStore.load(entryID: entryID, signature: signature)
-            ?? (allowLooseCache ? ProblemCardImageStore.loadAny(entryID: entryID) : nil)
-        if aiImage != nil {
-            isGenerating = false
-            generationError = nil
-            return
-        }
-
-        guard aiEnabled,
-              !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let sourceImage else {
-            isGenerating = false
-            generationError = nil
-            return
-        }
-
-        isGenerating = true
-        generationError = nil
-        let result = await ProblemCardImagePipeline.shared.loadOrGenerate(
-            entryID: entryID,
-            signature: signature,
-            sourceImage: sourceImage,
-            grade: grade,
-            routeColor: routeColor
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            Capsule(style: .continuous)
+                .fill(HoldShapeRenderer.frameColor(for: grade).opacity(0.94))
         )
-        switch result {
-        case .ready(let generated):
-            aiImage = generated
-        case .failed(let message):
-            generationError = message
-        }
-        isGenerating = false
     }
+}
+
+struct HoldContourShape: Shape {
+    let points: [CGPoint]
+    var drawRect: CGRect? = nil
+    var inset: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let drawingRect = (drawRect ?? rect).insetBy(dx: inset, dy: inset)
+        let normalizedPoints = points.isEmpty
+            ? RouteGeometry.ellipsePoints(center: CGPoint(x: 0.5, y: 0.5), width: 0.1, height: 0.1)
+            : points
+
+        return Path { path in
+            guard let first = normalizedPoints.first else { return }
+            path.move(to: CGPoint(x: drawingRect.minX + first.x * drawingRect.width, y: drawingRect.minY + first.y * drawingRect.height))
+            for point in normalizedPoints.dropFirst() {
+                path.addLine(to: CGPoint(x: drawingRect.minX + point.x * drawingRect.width, y: drawingRect.minY + point.y * drawingRect.height))
+            }
+            path.closeSubpath()
+        }
+    }
+}
+
+@MainActor
+enum RouteBlueprintExportStore {
+    static func exportPNG(
+        holds: [HoldEntity],
+        sourceImage: UIImage?,
+        wallOutline: [CGPoint],
+        grade: String,
+        routeColor: RouteColor,
+        wallAngle: WallAngle,
+        name: String
+    ) throws -> URL {
+        let content = RouteBlueprintArtwork(
+            holds: holds,
+            sourceImage: sourceImage,
+            wallOutline: wallOutline,
+            grade: grade,
+            routeColor: routeColor,
+            wallAngle: wallAngle
+        )
+        .frame(width: 1024, height: 1536)
+
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = 1
+
+        guard let image = renderer.uiImage,
+              let data = image.pngData() else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        let filename = sanitizedFilename(name.isEmpty ? "route-blueprint" : name) + ".png"
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+
+    private static func sanitizedFilename(_ text: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        let replaced = text
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .unicodeScalars
+            .map { allowed.contains($0) ? Character($0) : "-" }
+        return String(replaced).trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    }
+}
+
+struct ActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }

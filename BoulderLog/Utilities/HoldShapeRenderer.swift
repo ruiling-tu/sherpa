@@ -20,7 +20,6 @@ enum HoldShapeRenderer {
 
     static func buildPatches(image: UIImage, holds: [HoldEntity]) -> [HoldPatch] {
         holds.map { hold in
-            let key = cacheKey(for: hold, in: image)
             let result = patchMaskAndColor(for: hold, in: image)
 
             return HoldPatch(

@@ -23,6 +23,7 @@ struct ProjectRepository {
 
     func createEntry(in session: SessionEntity, draft: EntryDraft) throws {
         let imagePath = try ImageStore.saveJPEG(data: draft.croppedImageData)
+        let entryGym = draft.gym.isEmpty ? session.gym : draft.gym
         let entry = ProjectEntryEntity(
             name: draft.name,
             grade: draft.grade,
@@ -30,11 +31,12 @@ struct ProjectRepository {
             attempts: draft.attempts,
             wallAngle: draft.wallAngle,
             notes: draft.notes,
-            gym: draft.gym,
+            gym: entryGym,
             createdAt: Date(),
             updatedAt: Date(),
             imagePath: imagePath,
             routeColor: draft.routeColor,
+            wallOutline: draft.wallOutline,
             styleTags: draft.styleTags,
             holdTypeTags: draft.holdTypeTags,
             techniqueTags: draft.techniqueTags,
@@ -46,10 +48,15 @@ struct ProjectRepository {
                 xNormalized: $0.xNormalized,
                 yNormalized: $0.yNormalized,
                 radius: $0.radius,
+                widthNormalized: $0.widthNormalized,
+                heightNormalized: $0.heightNormalized,
+                rotationRadians: $0.rotationRadians,
                 role: $0.role,
                 orderIndex: $0.orderIndex,
                 note: $0.note,
                 holdType: $0.holdType,
+                contourPoints: $0.contourPoints,
+                confidence: $0.confidence,
                 entry: entry
             )
         }
@@ -57,22 +64,6 @@ struct ProjectRepository {
 
         context.insert(entry)
         try context.save()
-
-        // Reuse the generated preview card so Library can render immediately after save.
-        let signature = ProblemCardPromptFactory.cacheSignature(
-            grade: draft.grade,
-            routeColor: draft.routeColor,
-            model: AICardSettings.model
-        )
-        ProblemCardImageStore.cloneCachedCard(
-            from: ProblemCardImageStore.previewDraftEntryID,
-            to: entry.id,
-            signature: signature
-        )
-        if ProblemCardImageStore.load(entryID: entry.id, signature: signature) == nil,
-           let previewImage = ProblemCardImageStore.loadAny(entryID: ProblemCardImageStore.previewDraftEntryID) {
-            ProblemCardImageStore.save(image: previewImage, entryID: entry.id, signature: signature)
-        }
     }
 
     func saveEntry(_ entry: ProjectEntryEntity) throws {
@@ -148,29 +139,51 @@ struct HoldDraft: Identifiable {
     var xNormalized: Double
     var yNormalized: Double
     var radius: Double
+    var widthNormalized: Double
+    var heightNormalized: Double
+    var rotationRadians: Double
     var role: HoldRole
     var orderIndex: Int?
     var note: String
     var holdType: HoldTypeTag
+    var contourPoints: [CGPoint]
+    var confidence: Double
 
     init(
         id: UUID = UUID(),
         xNormalized: Double,
         yNormalized: Double,
         radius: Double = 0.045,
+        widthNormalized: Double = 0.09,
+        heightNormalized: Double = 0.09,
+        rotationRadians: Double = 0,
         role: HoldRole = .normal,
         orderIndex: Int? = nil,
         note: String = "",
-        holdType: HoldTypeTag = .crimp
+        holdType: HoldTypeTag = .crimp,
+        contourPoints: [CGPoint] = [],
+        confidence: Double = 1
     ) {
         self.id = id
         self.xNormalized = xNormalized
         self.yNormalized = yNormalized
         self.radius = radius
+        self.widthNormalized = widthNormalized
+        self.heightNormalized = heightNormalized
+        self.rotationRadians = rotationRadians
         self.role = role
         self.orderIndex = orderIndex
         self.note = note
         self.holdType = holdType
+        self.contourPoints = contourPoints.isEmpty
+            ? RouteGeometry.ellipsePoints(
+                center: CGPoint(x: xNormalized, y: yNormalized),
+                width: widthNormalized,
+                height: heightNormalized,
+                rotation: rotationRadians
+            )
+            : contourPoints
+        self.confidence = confidence
     }
 }
 
@@ -187,5 +200,6 @@ struct EntryDraft {
     var notes: String = ""
     var gym: String = ""
     var croppedImageData: Data = Data()
+    var wallOutline: [CGPoint] = RouteGeometry.defaultWallOutline
     var holds: [HoldDraft] = []
 }

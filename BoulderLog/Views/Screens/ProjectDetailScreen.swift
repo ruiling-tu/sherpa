@@ -7,7 +7,7 @@ struct ProjectDetailScreen: View {
 
     @State private var showOverlay = true
     @State private var selectedHold: HoldEntity?
-    @State private var cardRefreshToken = 0
+    @State private var exportFile: DetailExportFile?
     private let cardAspectRatio: CGFloat = 2.0 / 3.0
 
     var body: some View {
@@ -20,10 +20,10 @@ struct ProjectDetailScreen: View {
                         DojoSurface {
                             VStack(alignment: .leading, spacing: DojoSpace.md) {
                                 HStack(alignment: .center, spacing: DojoSpace.sm) {
-                                    DojoSectionHeader(title: "Route Visuals", subtitle: "Original and 2D card")
+                                    DojoSectionHeader(title: "Route Visuals", subtitle: "Original photo and extracted blueprint")
                                     Spacer()
-                                    Button("Regenerate") {
-                                        cardRefreshToken += 1
+                                    Button("Export PNG") {
+                                        exportBlueprint()
                                     }
                                     .font(DojoType.caption)
                                     .foregroundStyle(DojoTheme.accentPrimary)
@@ -36,18 +36,19 @@ struct ProjectDetailScreen: View {
                                     ],
                                     spacing: DojoSpace.md
                                 ) {
-                                    projectMediaCard(title: showOverlay ? "Original + Markers" : "Original") {
+                                    projectMediaCard(title: showOverlay ? "Original + Geometry" : "Original") {
                                         OverlayImageView(image: image, holds: entry.holds, showOverlay: showOverlay, fillsBounds: true)
                                     }
 
-                                    projectMediaCard(title: "2D Problem Card") {
+                                    projectMediaCard(title: "Route Blueprint") {
                                         ProblemCard2DView(
                                             entryID: entry.id,
                                             holds: sortedHolds,
                                             sourceImage: image,
+                                            wallOutline: entry.wallOutline,
                                             grade: entry.grade,
                                             routeColor: entry.routeColor,
-                                            refreshTrigger: cardRefreshToken
+                                            wallAngle: entry.wallAngle
                                         ) { hold in
                                             selectedHold = hold
                                         }
@@ -94,13 +95,16 @@ struct ProjectDetailScreen: View {
                             try? ProjectRepository(context: context).saveEntry(entry)
                         }
                     } else {
-                        Text("Tap a hold in the 2D card to edit its note.")
+                        Text("Tap a hold in the blueprint to edit its note.")
                             .font(DojoType.caption)
                             .foregroundStyle(DojoTheme.textSecondary)
                     }
                 }
                 .padding(.vertical, DojoSpace.lg)
             }
+        }
+        .sheet(item: $exportFile) { item in
+            ActivityShareSheet(items: [item.url])
         }
         .navigationTitle("Project")
         .navigationBarTitleDisplayMode(.inline)
@@ -114,6 +118,23 @@ struct ProjectDetailScreen: View {
 
     private var sourceImage: UIImage? {
         ImageStore.load(path: entry.imagePath)
+    }
+
+    private func exportBlueprint() {
+        do {
+            let url = try RouteBlueprintExportStore.exportPNG(
+                holds: sortedHolds,
+                sourceImage: sourceImage,
+                wallOutline: entry.wallOutline,
+                grade: entry.grade,
+                routeColor: entry.routeColor,
+                wallAngle: entry.wallAngle,
+                name: entry.name.isEmpty ? "route-blueprint" : entry.name
+            )
+            exportFile = DetailExportFile(url: url)
+        } catch {
+            exportFile = nil
+        }
     }
 
     private func projectMediaCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -201,6 +222,11 @@ struct ProjectDetailScreen: View {
     }
 }
 
+private struct DetailExportFile: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
 private struct OverlayImageView: View {
     let image: UIImage
     let holds: [HoldEntity]
@@ -220,21 +246,52 @@ private struct OverlayImageView: View {
                     .frame(width: geo.size.width, height: geo.size.height)
 
                 if showOverlay {
+                    let wallPoints = entryWallOutline.map { ImageSpaceTransform.viewPoint(from: $0, imageRect: imageRect) }
+
+                    Path { path in
+                        guard let first = wallPoints.first else { return }
+                        path.move(to: first)
+                        for point in wallPoints.dropFirst() {
+                            path.addLine(to: point)
+                        }
+                        path.closeSubpath()
+                    }
+                    .stroke(Color.white.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+
                     ForEach(holds) { hold in
-                        let center = ImageSpaceTransform.viewPoint(
-                            from: CGPoint(x: hold.xNormalized, y: hold.yNormalized),
-                            imageRect: imageRect
-                        )
-                        DojoHoldMarker(
-                            role: hold.role,
-                            diameter: max(12, hold.radius * imageRect.width * 2),
-                            orderText: hold.orderIndex.map(String.init)
-                        )
-                        .position(center)
+                        let contour = hold.contourPoints.map { ImageSpaceTransform.viewPoint(from: $0, imageRect: imageRect) }
+                        Path { path in
+                            guard let first = contour.first else { return }
+                            path.move(to: first)
+                            for point in contour.dropFirst() {
+                                path.addLine(to: point)
+                            }
+                            path.closeSubpath()
+                        }
+                        .fill(entryRouteColor.opacity(0.34))
+                        .overlay {
+                            Path { path in
+                                guard let first = contour.first else { return }
+                                path.move(to: first)
+                                for point in contour.dropFirst() {
+                                    path.addLine(to: point)
+                                }
+                                path.closeSubpath()
+                            }
+                            .stroke(entryRouteColor, lineWidth: 1.4)
+                        }
                     }
                 }
             }
         }
+    }
+
+    private var entryWallOutline: [CGPoint] {
+        holds.first?.entry?.wallOutline ?? RouteGeometry.defaultWallOutline
+    }
+
+    private var entryRouteColor: Color {
+        holds.first?.entry?.routeColor.swatch ?? Color.white
     }
 }
 

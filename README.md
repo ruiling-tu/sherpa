@@ -1,6 +1,6 @@
 # BoulderLog iOS App
 
-BoulderLog is an iOS app for logging bouldering sessions and projects, with optional AI-generated 2D problem cards from wall photos.
+BoulderLog is an iOS app for logging bouldering sessions and projects, with locally extracted route blueprints generated from wall photos.
 
 ## Current app structure
 
@@ -21,35 +21,29 @@ BoulderLog is an iOS app for logging bouldering sessions and projects, with opti
 - Route information controls in Step 3:
 1. Grade selection (`V0` to `V10`)
 2. Route color selection (`yellow`, `green`, `red`, `blue`, `black`, `white`, `purple`, `orange`, `pink`, `brown`, `gray`, `teal`)
-- AI 2D problem card generation in Step 4
+- Local route extraction and blueprint export in Step 3 and Step 4
 - Side-by-side route visuals in review and project detail:
 1. Original image (+ optional markers overlay)
-2. Generated 2D problem card
+2. Extracted route blueprint
 - Grade-reactive 2D card frame styling across the full grade range
 
-## AI 2D card pipeline
+## Route extraction pipeline
 
-- Input sent to model:
-1. Clean source image (no local annotation overlay data)
+- Input used locally:
+1. Cropped wall photo
 2. Selected route color
-3. Selected grade context
-- Prompt constraints prioritize:
-1. Spatial fidelity (highest priority)
-2. Hold shape and size fidelity
-3. Strict color filtering to selected route color only
-- Upload preparation is tuned for quality under a 35s timeout:
-1. Fidelity profile: up to 1408px long side, JPEG quality target 0.9, byte cap 2.8MB
-2. Fallback profile for resilience if needed
-- Generated cards are cached locally and keyed by prompt signature + model.
+3. Selected grade and wall angle metadata
+- Extraction priorities:
+1. Color-guided hold isolation for the selected route color
+2. Preservation of hold outline geometry and relative spacing
+3. Editable wall outline and draggable hold correction before export
+- Output:
+1. Persisted vector-like route geometry for each hold
+2. PNG export of the current route blueprint
 
 ## Settings
 
-`Settings -> AI Problem Cards` lets you:
-
-- Enable or disable AI generation
-- Configure OpenAI API key (or use bundled/default env configuration)
-- Choose model preset (`Fast` or `Balanced`)
-- Clear generated card cache
+`Settings` now documents the local extraction, editing, and export workflow.
 
 ## Design system
 

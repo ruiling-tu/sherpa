@@ -31,6 +31,7 @@ struct ImageSpaceTransform {
 
 extension UIImage {
     func cropped(normalizedRect: CGRect) -> UIImage? {
+        let uprightImage = normalized()
         let clamped = CGRect(
             x: max(0, min(1, normalizedRect.origin.x)),
             y: max(0, min(1, normalizedRect.origin.y)),
@@ -38,14 +39,23 @@ extension UIImage {
             height: max(0.05, min(1, normalizedRect.size.height))
         )
 
+        guard let sourceCG = uprightImage.cgImage else { return nil }
         let cropRect = CGRect(
-            x: clamped.origin.x * size.width,
-            y: clamped.origin.y * size.height,
-            width: clamped.size.width * size.width,
-            height: clamped.size.height * size.height
+            x: clamped.origin.x * CGFloat(sourceCG.width),
+            y: clamped.origin.y * CGFloat(sourceCG.height),
+            width: clamped.size.width * CGFloat(sourceCG.width),
+            height: clamped.size.height * CGFloat(sourceCG.height)
         ).integral
 
-        guard let cg = cgImage?.cropping(to: cropRect) else { return nil }
-        return UIImage(cgImage: cg, scale: scale, orientation: imageOrientation)
+        guard let cg = sourceCG.cropping(to: cropRect) else { return nil }
+        return UIImage(cgImage: cg, scale: uprightImage.scale, orientation: .up)
+    }
+
+    private func normalized() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+        }
     }
 }

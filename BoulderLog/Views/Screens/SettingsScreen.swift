@@ -1,12 +1,6 @@
 import SwiftUI
 
 struct SettingsScreen: View {
-    @AppStorage(AICardSettings.enabledKey) private var aiEnabled = true
-    @AppStorage(AICardSettings.apiKeyKey) private var openAIKey = AICardSettings.bundledDefaultAPIKey
-    @AppStorage(AICardSettings.modelKey) private var model = AICardSettings.defaultModel
-
-    @State private var revealKey = false
-
     var body: some View {
         NavigationStack {
             DojoScreen {
@@ -15,9 +9,9 @@ struct SettingsScreen: View {
                         DojoSurface {
                             VStack(alignment: .leading, spacing: DojoSpace.sm) {
                                 DojoSectionHeader(title: "BoulderLog")
-                                Text("Manual hold marking always works, even when AI is disabled.")
+                                Text("Route blueprints are extracted locally from the cropped wall photo using the selected route color.")
                                     .font(DojoType.body)
-                                Text("AI rendering is optional and used only for generating collectible 2D problem cards.")
+                                Text("Each detected hold keeps its own outline, position, and wall relationship so you can correct the geometry before exporting a PNG.")
                                     .font(DojoType.caption)
                                     .foregroundStyle(DojoTheme.textSecondary)
                             }
@@ -25,75 +19,20 @@ struct SettingsScreen: View {
 
                         DojoSurface {
                             VStack(alignment: .leading, spacing: DojoSpace.md) {
-                                DojoSectionHeader(title: "AI Problem Cards", subtitle: "Optional image-to-image rendering")
+                                DojoSectionHeader(title: "Route Extraction", subtitle: "Current workflow")
 
-                                Toggle("Enable AI card generation", isOn: $aiEnabled)
-                                    .tint(DojoTheme.accentPrimary)
-                                    .font(DojoType.body)
-
-                                VStack(alignment: .leading, spacing: DojoSpace.xs) {
-                                    Text("OpenAI API Key (Preconfigured, Optional Override)")
-                                        .font(DojoType.caption)
-                                        .foregroundStyle(DojoTheme.textSecondary)
-                                    Group {
-                                        if revealKey {
-                                            TextField("sk-...", text: $openAIKey)
-                                                .textInputAutocapitalization(.never)
-                                                .autocorrectionDisabled()
-                                        } else {
-                                            SecureField("sk-...", text: $openAIKey)
-                                                .textInputAutocapitalization(.never)
-                                                .autocorrectionDisabled()
-                                        }
-                                    }
-                                    .font(DojoType.caption)
-                                    .padding(10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(Color.white.opacity(0.75))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                    .stroke(DojoTheme.divider, lineWidth: 0.8)
-                                            )
-                                    )
-
-                                    Button(revealKey ? "Hide key" : "Show key") {
-                                        revealKey.toggle()
-                                    }
-                                    .font(DojoType.caption)
-                                    .foregroundStyle(DojoTheme.textSecondary)
-                                }
-
-                                Menu {
-                                    ForEach(AICardSettings.modelPresets) { option in
-                                        Button(model == option.id ? "\(option.title) ✓" : option.title) {
-                                            model = option.id
-                                        }
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text("Model")
-                                            .font(DojoType.caption)
-                                            .foregroundStyle(DojoTheme.textSecondary)
-                                        Spacer()
-                                        Text(AICardSettings.title(for: model))
-                                            .font(DojoType.caption)
-                                    }
-                                    .padding(10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(Color.white.opacity(0.75))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                    .stroke(DojoTheme.divider, lineWidth: 0.8)
-                                            )
-                                    )
-                                }
-                                .buttonStyle(.plain)
-
-                                DojoButtonSecondary(title: "Clear Generated Card Cache") {
-                                    ProblemCardImageStore.clearAll()
-                                }
+                                settingRow(
+                                    title: "Detection",
+                                    detail: "Local color-based extraction from the cropped route photo."
+                                )
+                                settingRow(
+                                    title: "Editing",
+                                    detail: "Drag holds to fix spacing and drag wall corners to match the wall shape."
+                                )
+                                settingRow(
+                                    title: "Export",
+                                    detail: "Generate a PNG blueprint from the current route geometry and share or save it."
+                                )
                             }
                         }
                     }
@@ -105,5 +44,17 @@ struct SettingsScreen: View {
             .toolbarBackground(DojoTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
         }
+    }
+
+    private func settingRow(title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(DojoType.caption)
+                .foregroundStyle(DojoTheme.textSecondary)
+            Text(detail)
+                .font(DojoType.body)
+                .foregroundStyle(DojoTheme.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
