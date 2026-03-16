@@ -1,6 +1,15 @@
 import SwiftUI
 
+enum AppTab: Hashable {
+    case sessions
+    case library
+    case insights
+    case guide
+}
+
 struct RootTabView: View {
+    @State private var selectedTab: AppTab = .sessions
+
     init() {
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
@@ -10,18 +19,24 @@ struct RootTabView: View {
     }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             LogTabScreen()
+                .tag(AppTab.sessions)
                 .tabItem { Label("Sessions", systemImage: "book") }
 
             LibraryTabScreen()
+                .tag(AppTab.library)
                 .tabItem { Label("Library", systemImage: "square.stack") }
 
             InsightsScreen()
+                .tag(AppTab.insights)
                 .tabItem { Label("Insights", systemImage: "chart.line.uptrend.xyaxis") }
 
-            SettingsScreen()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+            SettingsScreen { tab in
+                selectedTab = tab
+            }
+            .tag(AppTab.guide)
+            .tabItem { Label("Guide", systemImage: "map") }
         }
         .tint(DojoTheme.accentPrimary)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
